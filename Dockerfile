@@ -1,5 +1,5 @@
 FROM node:12-alpine
-LABEL author=Zeusro site=http://mybestcheng.site/
+LABEL author=mybestcheng site=http://mybestcheng.site/
 ADD build_and_run.sh build_and_run.sh
 RUN echo "Asia/Shanghai" > /etc/timezone \
     && echo "https://mirrors.ustc.edu.cn/alpine/v3.9/main/" > /etc/apk/repositories  \
