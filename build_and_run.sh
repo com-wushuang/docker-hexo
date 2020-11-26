@@ -3,7 +3,7 @@ git clone https://github.com/com-wushuang/docker-hexo.git
 
 # 将文章clone到容器中
 git clone https://github.com/com-wushuang/blog.git
-mv blog/* docker-hexo/source/_posts
+mv blog/source/_posts/* docker-hexo/source/_posts
 
 cd docker-hexo/
 npm install
