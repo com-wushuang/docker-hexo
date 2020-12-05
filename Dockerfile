@@ -1,4 +1,5 @@
 FROM node:12-alpine
+RUN find / -name build_and_run.sh
 ADD docker-hexo/ /
 RUN echo "Asia/Shanghai" > /etc/timezone \
     && npm install hexo-cli -g \
