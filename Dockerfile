@@ -6,4 +6,4 @@ RUN echo "Asia/Shanghai" > /etc/timezone \
     && chmod 777 /build_and_run.sh
 EXPOSE 80
 
-ENTRYPOINT ["sh","/docker-hexo/build_and_run.sh"]
+ENTRYPOINT ["sh","/build_and_run.sh"]
