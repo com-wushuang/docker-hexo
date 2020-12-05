@@ -1,0 +1,15 @@
+---
+kind: pipeline
+type: docker
+name: blog
+
+steps:
+- name: build_image  
+  image: plugins/docker
+  settings:
+    username: 
+      from_secret: docker_username
+    password: 
+      from_secret: docker_password
+    repo: mystchen/blog
+    tags: latest
