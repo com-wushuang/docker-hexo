@@ -1,10 +1,9 @@
 FROM node:12-alpine
-RUN tree ./
-RUN find / -name build_and_run.sh
-ADD docker-hexo/ /
+ADD ./ /
+RUN cat build_and_run.sh
 RUN echo "Asia/Shanghai" > /etc/timezone \
     && npm install hexo-cli -g \
-    && chmod 777 /docker-hexo/build_and_run.sh
+    && chmod 777 /build_and_run.sh
 EXPOSE 80
 
 ENTRYPOINT ["sh","/docker-hexo/build_and_run.sh"]
