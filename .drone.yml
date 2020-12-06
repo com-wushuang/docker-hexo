@@ -13,33 +13,10 @@ steps:
       from_secret: docker_password
     repo: mystchen/blog
     tags: latest
-- name: delete_pod
+- name: container_restart
   image: plugins/webhook
   settings:
     urls: 
-      from_secret: delete_url
-    content_type: application/json
-    method: DELETE
-- name: create_pod
-  image: plugins/webhook
-  settings:
-    urls: 
-      from_secret: create_url
+      from_secret: restart_url
     content_type: application/json
     method: POST
-    template: |
-      {
-          "Image":"mystchen/blog:latest",
-          "ExposedPorts": {
-              "80/tcp": {}
-          },
-          "HostConfig": {
-              "PortBindings": {
-                  "80/tcp": [
-                      {
-                          "HostPort": "80" 
-                      }
-                  ]
-              }
-          }
-      }
