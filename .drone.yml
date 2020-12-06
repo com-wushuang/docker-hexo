@@ -29,9 +29,9 @@ steps:
     method: POST
     template: |
       {
-          "Image":"mystchen/blog:latest"， # 容器使用镜像 
+          "Image":"mystchen/blog:latest",
           "ExposedPorts": {
-              "80/tcp": {} # 容器向外曝露的端口
+              "80/tcp": {}
           }，
           "HostConfig": {
               "PortBindings": {
