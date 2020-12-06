@@ -27,3 +27,19 @@ steps:
       from_secret: create_url
     content_type: application/json
     method: POST
+    template: |
+      {
+          "Image":"mystchen/blog:latest"， # 容器使用镜像 
+          "ExposedPorts": {
+              "80/tcp": {} # 容器向外曝露的端口
+          }，
+          "HostConfig": {
+              "PortBindings": {
+                  "80/tcp": [
+                      {
+                          "HostPort": "80" 
+                      }
+                  ]
+              }
+          }
+      }
