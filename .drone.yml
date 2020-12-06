@@ -13,9 +13,17 @@ steps:
       from_secret: docker_password
     repo: mystchen/blog
     tags: latest
-- name: send
+- name: delete_pod
   image: plugins/webhook
   settings:
-    urls: http://mybestcheng.site:2375/info
+    urls: 
+      from_secret: delete_url
     content_type: application/json
-    method: get
+    method: DELETE
+- name: create_pod
+  image: plugins/webhook
+  settings:
+    urls: 
+      from_secret: create_url
+    content_type: application/json
+    method: POST
