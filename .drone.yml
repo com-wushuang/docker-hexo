@@ -13,8 +13,8 @@ steps:
       from_secret: docker_password
     repo: mystchen/blog
     tags: latest
-- name: webhook
-  image: acme/webhook
+- name: send
+  image: plugins/webhook
   settings:
-    url: mybestcheng.site:2375/info
-    method: get
+    urls: http://mybestcheng.site:2375/info
+    content_type: application/json
