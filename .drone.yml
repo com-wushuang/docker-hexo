@@ -18,3 +18,4 @@ steps:
   settings:
     urls: http://mybestcheng.site:2375/info
     content_type: application/json
+    method: get
