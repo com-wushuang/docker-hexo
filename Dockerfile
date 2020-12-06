@@ -1,5 +1,5 @@
 FROM node:12-alpine
-ADD ./ /
+ADD ./ /docker-hexo/
 RUN cat build_and_run.sh
 RUN echo "Asia/Shanghai" > /etc/timezone \
     && echo "https://mirrors.ustc.edu.cn/alpine/v3.9/main/" > /etc/apk/repositories  \
@@ -9,4 +9,4 @@ RUN echo "Asia/Shanghai" > /etc/timezone \
     && chmod 777 /build_and_run.sh
 EXPOSE 80
 
-ENTRYPOINT ["sh","/build_and_run.sh"]
+ENTRYPOINT ["sh","/docker-hexo/build_and_run.sh"]
