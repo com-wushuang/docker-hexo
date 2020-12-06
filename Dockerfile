@@ -1,6 +1,5 @@
 FROM node:12-alpine
 ADD ./ /tmp/
-RUN cat build_and_run.sh
 RUN echo "Asia/Shanghai" > /etc/timezone \
     && echo "https://mirrors.ustc.edu.cn/alpine/v3.9/main/" > /etc/apk/repositories  \
     && npm config set registry https://registry.npm.taobao.org \
