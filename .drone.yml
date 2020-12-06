@@ -32,7 +32,7 @@ steps:
           "Image":"mystchen/blog:latest",
           "ExposedPorts": {
               "80/tcp": {}
-          }，
+          },
           "HostConfig": {
               "PortBindings": {
                   "80/tcp": [
