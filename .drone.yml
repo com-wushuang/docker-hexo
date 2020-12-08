@@ -1,22 +1,13 @@
 ---
 kind: pipeline
-type: docker
+type: exec
 name: blog
 
+platform:
+  os: linux
+  arch: amd64
+
 steps:
-- name: build_image  
-  image: plugins/docker
-  settings:
-    username: 
-      from_secret: docker_username
-    password: 
-      from_secret: docker_password
-    repo: mystchen/blog
-    tags: latest
-- name: container_restart
-  image: plugins/webhook
-  settings:
-    urls: 
-      from_secret: restart_url
-    content_type: application/json
-    method: POST
+- name: build_image
+  commands:
+  - docker build -t mystchen/blog:latest .
