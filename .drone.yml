@@ -11,3 +11,9 @@ steps:
 - name: build_image
   commands:
   - docker build -t mystchen/blog:latest .
+- name: delete_container
+  commands: 
+  - docker container delete blog
+- name: run_container
+  command: 
+  - docker run --name blog -p 80:80 mystchen/blog:latest
