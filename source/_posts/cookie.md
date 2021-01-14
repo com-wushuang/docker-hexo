@@ -109,7 +109,7 @@ Set-Cooke:name=Greg; domain=nczonline.net; path=/blog
 Set-Cookie:name=Nicholas; domain=nczonline.net; path=/
 ```
 
-两个同时拥有“name”的不同的cookie。如果你访问在www.nczonline.net/blog下的一个页面，以下的消息头将被包含进来：
+两个同时拥有“name”的不同的cookie。如果你访问在 www.nczonline.net/blog 下的一个页面，以下的消息头将被包含进来：
 
 ```
 Cookie：name=Greg;name=Nicholas
