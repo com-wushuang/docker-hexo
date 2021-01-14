@@ -8,16 +8,20 @@ tags:
 
 早期Web开发面临的最大问题之一是如何管理状态。因为http是无状态的协议，因此服务器端没有办法知道两个请求是否来自于同一个浏览器。那时的办法是在请求的页面中插入一个token，并且在下一次请求中将这个token返回至服务器。这就需要在form中插入一个包含token的隐藏表单域，或着在URL的qurey字符串中传递该token。这两种办法都强调手工操作并且极易出错。
 
-网景通讯的一个雇员，在1994年将“[magic cookies](http://en.wikipedia.org/wiki/Magic_cookie)”的概念应用到了web通讯中，他的最早的说明文档提供了一些cookies工作原理的基本信息该文档在[RFC2109](http://tools.ietf.org/html/rfc2109)中被规范化，成为所有浏览器实现cookie的参考依据。
-
-## cookie是什么
-
-一个cookie就是存储在用户主机浏览器中的一小段文本文件。Cookies是纯文本形式，它们不包含任何可执行代码。服务器告之浏览器来将这些信息存储并且基于一系列规则在之后的每个请求中都将该信息返回至服务器。Web服务器之后可以利用这些信息来标识用户。多数需要登录的站点通常会在你的认证信息通过后来设置一个cookie，之后只要这个cookie存在并且合法，你就可以自由的浏览这个站点的所有部分。再次，cookie只是包含了数据，就其本身而言并不有害。
-
 - 早期Web开发中，通过注入token来管理状态，实现的方式是：服务器生成一个token插入到请求界面中，并在下一次请求时将该token返回至服务器。
 - 基于cookie管理状态的方式是：服务器设置cookie，浏览器存储cookie，并在以后每次请求服务期时都将cookie发送给服务器。
 
-以上两种实现方式的本质原理都是一样的，服务器生成信息（用户标识、token、sessionID），客户端存储该信息，并且在以后请求服务器时携带该信息，然后服务器通过解析这些信息来判断这些请求来自同用户或浏览器。
+以上两种实现方式的本质原理都是一样的，服务器生成信息（用户标识、token、sessionID），客户端存储该信息，并且在以后请求服务器时携带该信息，然后服务器通过解析这些信息来判断这些请求来自同一用户或浏览器。
+
+## cookie是什么
+
+HTTP Cookie（也叫 Web Cookie 或浏览器 Cookie）是服务器发送到用户浏览器并保存在本地的一小块数据，它会在浏览器下次向同一服务器再发起请求时被携带并发送到服务器上。通常，它用于告知服务端两个请求是否来自同一浏览器，如保持用户的登录状态。Cookie 使基于无状态的HTTP协议记录稳定的状态信息成为了可能。
+
+Cookie 主要用于以下三个方面：
+
+- 会话状态管理（如用户登录状态、购物车、游戏分数或其它需要记录的信息）
+- 个性化设置（如用户自定义设置、主题等）
+- 浏览器行为跟踪（如跟踪分析用户行为等）
 
 ## 创建cookie
 
@@ -47,7 +51,7 @@ Cookie:value1 ; value2 ; name3=value3
 
 ### 选项
 
-#### expires选项
+#### Expires选项
 
 expires指定了cookie何时不会再被发送到服务器端的，因此该cookie可能会被浏览器删掉。格式为`Wdy, DD-Mon--YYYY HH:MM:SS GMT`的值，例如：
 
@@ -57,7 +61,11 @@ Set-Cookie:name=Nicholas;expires=Sat, 02 May 2009 23:38:25 GMT
 
 没有expires选项时，cookie的寿命仅限于单一的会话中。浏览器的关闭意味这一次会话的结束，所以会话cookie只存在于浏览器保持打开的状态之下。这就是为什么当你登录到一个web应用时经常看到一个checkbox，询问你是否选择存储你的登录信息：如果你选择是的话，那么一个expires选项会被附加到登录的cookie中。如果expires选项设置了一个过去的时间点，那么这个cookie会被立即删除。
 
-#### domain选项
+#### Max-Age选项
+
+expires是 http/1.0协议中的选项，在新的http/1.1协议中expires已经由 max-age选项代替，两者的作用都是限制cookie 的有效时间。expires的值是一个时间点（cookie失效时刻= expires），而max-age的值是一个以`秒`为单位时间段。默认（缺省）情况下，有效期为session。
+
+#### Domain选项
 
 domain指示cookie将要发送到哪个域或那些域中。默认情况下，domain会被设置为创建该cookie的页面所在的域名。domain选项被用来扩展cookie值所要发送域的数量。例如:
 
@@ -67,7 +75,7 @@ Set-Cookie:name=Nicholas;domain=nczonline.net
 
 想象诸如[Yahoo](http://www.yahoo.com/)[！](http://www.yahoo.com/)这样的大型网站都会有许多以name.yahoo.com(例如：[my.yahoo.com](http://my.yahoo.com/)、[finance.yahoo.com](http://finance.yahoo.com/)等等)为格式的站点。将cookie的domain选项设置为yahoo.com，就能够让浏览器发送该cookie到所有这些站点。浏览器会对domain的值与请求所要发送至的域名，做一个尾部比较（即从字符串的尾部开始比较），并且在匹配后发送一个Cookie消息头。
 
-####  path选项
+####  Path选项
 
 path也是用来控制何时发送cookie。将path属性值与请求的URL头部比较。如果字符匹配，则发送Cookie消息头，例如：
 
@@ -77,7 +85,7 @@ Set-Cookie:name=Nicholas;path=/blog
 
  在这个例子中，path选项值会与/blog,/blogrool等等相匹配；任何以/blog开头的选项都是合法的。只有在domain选项核实完毕之后才会对path属性进行比较。
 
-#### secure选项
+#### Secure选项
 
 不像其它选项，secure选项只是一个标记并且没有其它的值。一个secure cookie只有当请求是通过SSL和HTTPS创建时，才会发送到服务器端。例如：
 
@@ -87,9 +95,74 @@ Set-Cookie:name=Nicholas;secure
 
 实际应用中，机密且敏感的信息绝不应该在cookies中存储或传输，因为cookies的整个机制都是原本不安全的。默认情况下，在HTTPS链接上传输的cookies都会被自动添加上secure选项。
 
-## 修改cookie
+#### HttpOnly选项
 
-cookie有四个标识符：cookie的name，domain，path，secure标记。**注：expires不是cookie的标识符。**
+微软的IE6在cookies中引入了一个新的选项：HttpOnly。HttpOnly意思是告之浏览器该cookie绝不应该通过 Javascript 的document.cookie属性访问。设计该特征意在提供一个安全措施来帮助阻止通过 Javascript 发起的跨站脚本攻击(XSS)窃取cookie的行为。要创建一个HttpOnly cookie，只要向你的cookie中添加一个HttpOnly标记即可：
+
+```
+Set-Cookie: name=Nicholas; HttpOnly
+```
+
+一旦设定这个标记，通过documen.coookie则不能再访问该cookie。
+
+#### SameSite选项
+
+Chrome51开始，浏览器的 Cookie 新增加了一个SameSite选项，用来防止 CSRF 攻击和用户追踪。SameSite属性用来限制第三方 Cookie。他可以被设置为三个值：
+
+- Strict
+- Lax
+- None
+
+##### Strict
+
+`Strict`最为严格，完全禁止第三方 Cookie，跨站点时，任何情况下都不会发送 Cookie。换言之，只有当前网页的 URL 与请求目标一致，才会带上 Cookie。
+
+```bash
+Set-Cookie: CookieName=CookieValue; SameSite=Strict;
+```
+
+这个规则过于严格，可能造成非常不好的用户体验。比如，当前网页有一个 GitHub 链接，用户点击跳转就不会带有 GitHub 的 Cookie，跳转过去总是未登陆状态。
+
+##### Lax
+
+`Lax`规则稍稍放宽，大多数情况也是不发送第三方 Cookie，但是导航到目标网址的 Get 请求除外。
+
+```markup
+Set-Cookie: CookieName=CookieValue; SameSite=Lax;
+```
+
+导航到目标网址的 GET 请求，只包括三种情况：链接，预加载请求，GET 表单。详见下表。
+
+| 请求类型  |                 示例                 |    正常情况 | Lax         |
+| :-------- | :----------------------------------: | ----------: | :---------- |
+| 链接      |         `<a href="..."></a>`         | 发送 Cookie | 发送 Cookie |
+| 预加载    | `<link rel="prerender" href="..."/>` | 发送 Cookie | 发送 Cookie |
+| GET 表单  |  `<form method="GET" action="...">`  | 发送 Cookie | 发送 Cookie |
+| POST 表单 | `<form method="POST" action="...">`  | 发送 Cookie | 不发送      |
+| iframe    |    `<iframe src="..."></iframe>`     | 发送 Cookie | 不发送      |
+| AJAX      |            `$.get("...")`            | 发送 Cookie | 不发送      |
+| Image     |          `<img src="...">`           | 发送 Cookie | 不发送      |
+
+设置了`Strict`或`Lax`以后，基本就杜绝了 CSRF 攻击。当然，前提是用户浏览器支持 SameSite 属性。
+
+##### None
+
+Chrome 计划将`Lax`变为默认设置。这时，网站可以选择显式关闭`SameSite`属性，将其设为`None`。不过，前提是必须同时设置`Secure`属性（Cookie 只能通过 HTTPS 协议发送），否则无效。
+
+下面的设置无效。
+
+```bash
+Set-Cookie: widget_session=abc123; SameSite=None
+```
+
+下面的设置有效。
+
+```bash
+Set-Cookie: widget_session=abc123; SameSite=None; Secure
+```
+
+
+## 修改cookie
 
 假如服务器设置了如下cookie：
 
@@ -132,16 +205,3 @@ cookie会被浏览器自动删除，通常存在以下几种原因：
 - 原始的规范中限定每个域名下不超过20个cookies，早期的浏览器都遵循该规范。在IE7中增加cookie的限制到50个，与此同时Opera限定cookies个数为30。Safari和Chrome对与每个域名下的cookies个数没有限制。
 - 发向服务器的所有cookies的最大数量（空间）仍旧维持原始规范中所指出的：4KB。所有超出该限制的cookies都会被截掉并且不会发送至服务器。
 
-## HTTP-Only
-
-微软的IE6在cookies中引入了一个新的选项：HTTP-only。
-
-HTTP-Only意思是告之浏览器该cookie绝不应该通过Javascript的document.cookie属性访问。设计该特征意在提供一个安全措施来帮助阻止通过Javascript发起的跨站脚本攻击(XSS)窃取cookie的行为。
-
-要创建一个HTTP-Only cookie，只要向你的cookie中添加一个HTTP-Only标记即可：
-
-```
-Set-Cookie: name=Nicholas; HttpOnly
-```
-
-一旦设定这个标记，通过documen.coookie则不能再访问该cookie。
