@@ -1,14 +1,19 @@
 version: 2.1
 jobs:
- build:
-   machine: true
-   steps:
-     - checkout
+  build:
+    machine: true
+    steps:
+      - checkout
 
-     - run: echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
+      - run: echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
 
-     # build the application image
-     - run: docker build -t mystchen/blog:latest .
+      # build the application image
+      - run: docker build -t mystchen/blog:latest .
 
-     # deploy the image
-     - run: docker push mystchen/blog:latest
+      # deploy the image
+      - run: docker push mystchen/blog:latest
+  deploy-job:
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "1d:5f:b4:39:ce:d7:ec:d2:7c:dd:d1:96:9d:f4:21:33"
