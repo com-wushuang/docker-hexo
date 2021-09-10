@@ -16,3 +16,5 @@ jobs:
       - add_ssh_keys:
           fingerprints:
             - "1d:5f:b4:39:ce:d7:ec:d2:7c:dd:d1:96:9d:f4:21:33"
+      
+      - run : docker run -d -p 80:80 --name blog mystchen/docker-hexo:latest sh /run.sh
