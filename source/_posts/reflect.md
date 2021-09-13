@@ -123,7 +123,7 @@ func unpackEface(i interface{}) Value {
 
 总结来说，不管是`TypeOf`方法还是`ValueOf`方法，本质上是将变量先用入参`interface{}`装包，函数内部再对其进行解包。
 
-![反射间的转换](/Users/chengjun/Desktop/go语言/反射间的转换.png)
+![反射间的转换](反射间的转换.png)
 
 ## 反射三大定律
 
