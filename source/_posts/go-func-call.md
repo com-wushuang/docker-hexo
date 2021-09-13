@@ -119,7 +119,8 @@ $ GOOS=linux GOARCH=amd64 go tool compile -S main.go
 ### 解剖add
 
 ```assembly
-  0x0000 MOVL		"".b+12(SP), AX  0x0004 MOVL		"".a+8(SP), CX
+  0x0000 MOVL		"".b+12(SP), AX
+  0x0004 MOVL		"".a+8(SP), CX
 ```
 
 - `"".b+12(SP)` 和 `"".a+8(SP)` 分别指向栈的低 12 字节和低 8 字节位置。 `.a` 和 `.b` 是分配给引用地址的任意别名；尽管 *它们没有任何语义上的含义* ，但在使用虚拟寄存器和相对地址时，这种别名是需要强制使用的。
@@ -127,7 +128,9 @@ $ GOOS=linux GOARCH=amd64 go tool compile -S main.go
 - 第一个变量 `a` 的地址并不是 `0(SP)`，而是在 `8(SP)`；这是因为调用方通过使用 `CALL` 伪指令，把其返回地址保存在了 `0(SP)` 位置。
 
 ```assembly
-0x0008 ADDL CX, AX0x000a MOVL AX, "".~r2+16(SP)0x000e MOVB $1, "".~r3+20(SP)
+0x0008 ADDL CX, AX
+0x000a MOVL AX, "".~r2+16(SP)
+0x000e MOVB $1, "".~r3+20(SP)
 ```
 
 - `ADDL` 指令进行加法操作，L 这里代表 Long，4 字节的值，其将保存在 `AX` 和 `CX` 寄存器中的值进行相加，然后再保存进 `AX` 寄存器中。 这个结果之后被移动到 `"".~r2+16(SP)` 地址处，这是之前调用方专门为返回值预留的栈空间。 `"".~r2` 同样没什么语义上的含义。
@@ -141,8 +144,34 @@ $ GOOS=linux GOARCH=amd64 go tool compile -S main.go
 
 总之，下面是 `main.add` 即将执行 `RET` 指令时的栈的情况。
 
-```
-   |    +-------------------------+ <-- 32(SP)   |    |                         | G |    |                         | R |    |                         | O |    | main.main's saved       | W |    |     frame-pointer (BP)  | S |    |-------------------------| <-- 24(SP)   |    |      [alignment]        | D |    | "".~r3 (bool) = 1/true  | <-- 21(SP) O |    |-------------------------| <-- 20(SP) W |    |                         | N |    | "".~r2 (int32) = 42     | W |    |-------------------------| <-- 16(SP) A |    |                         | R |    | "".b (int32) = 32       | D |    |-------------------------| <-- 12(SP) S |    |                         |   |    | "".a (int32) = 10       |   |    |-------------------------| <-- 8(SP)   |    |                         |   |    |                         |   |    |                         | \ | /  | return address to       |  \|/   |     main.main + 0x30    |   -    +-------------------------+ <-- 0(SP) (TOP OF STACK)       (https://textik.com)
+```assembly
+   |    +-------------------------+ <-- 32(SP)
+   |    |                         |
+ G |    |                         |
+ R |    |                         |
+ O |    | main.main's saved       |
+ W |    |     frame-pointer (BP)  |
+ S |    |-------------------------| <-- 24(SP)
+   |    |      [alignment]        |
+ D |    | "".~r3 (bool) = 1/true  | <-- 21(SP)
+ O |    |-------------------------| <-- 20(SP)
+ W |    |                         |
+ N |    | "".~r2 (int32) = 42     |
+ W |    |-------------------------| <-- 16(SP)
+ A |    |                         |
+ R |    | "".b (int32) = 32       |
+ D |    |-------------------------| <-- 12(SP)
+ S |    |                         |
+   |    | "".a (int32) = 10       |
+   |    |-------------------------| <-- 8(SP)
+   |    |                         |
+   |    |                         |
+   |    |                         |
+ \ | /  | return address to       |
+  \|/   |     main.main + 0x30    |
+   -    +-------------------------+ <-- 0(SP) (TOP OF STACK)
+   
+    (https://textik.com)
 ```
 
 ### 返回主函数main
@@ -150,7 +179,9 @@ $ GOOS=linux GOARCH=amd64 go tool compile -S main.go
 `add`函数执行RET回到了`main`函数`0x30`指令处:
 
 ```assembly
-0x0030 MOVQ     16(SP), BP0x0035 ADDQ     $24, SP0x0039 RET
+0x0030 MOVQ     16(SP), BP
+0x0035 ADDQ     $24, SP
+0x0039 RET
 ```
 
 最后
@@ -176,7 +207,29 @@ $ GOOS=linux GOARCH=amd64 go tool compile -S main.go
 我们来看看之前的 main 函数，这次不再省略栈分裂的前导指令:
 
 ```assembly
-0x0000 TEXT	"".main(SB), $24-0  ;; stack-split prologue  0x0000 MOVQ	(TLS), CX  0x0009 CMPQ	SP, 16(CX)  0x000d JLS	58  0x000f SUBQ	$24, SP  0x0013 MOVQ	BP, 16(SP)  0x0018 LEAQ	16(SP), BP  ;; ...omitted FUNCDATA stuff...  0x001d MOVQ	$137438953482, AX  0x0027 MOVQ	AX, (SP)  ;; ...omitted PCDATA stuff...  0x002b CALL	"".add(SB)  0x0030 MOVQ	16(SP), BP  0x0035 ADDQ	$24, SP  0x0039 RET  ;; stack-split epilogue  0x003a NOP  ;; ...omitted PCDATA stuff...  0x003a CALL	runtime.morestack_noctxt(SB)  0x003f JMP	0
+0x0000 TEXT	"".main(SB), $24-0
+  ;; stack-split prologue
+  0x0000 MOVQ	(TLS), CX
+  0x0009 CMPQ	SP, 16(CX)
+  0x000d JLS	58
+
+  0x000f SUBQ	$24, SP
+  0x0013 MOVQ	BP, 16(SP)
+  0x0018 LEAQ	16(SP), BP
+  ;; ...omitted FUNCDATA stuff...
+  0x001d MOVQ	$137438953482, AX
+  0x0027 MOVQ	AX, (SP)
+  ;; ...omitted PCDATA stuff...
+  0x002b CALL	"".add(SB)
+  0x0030 MOVQ	16(SP), BP
+  0x0035 ADDQ	$24, SP
+  0x0039 RET
+
+  ;; stack-split epilogue
+  0x003a NOP
+  ;; ...omitted PCDATA stuff...
+  0x003a CALL	runtime.morestack_noctxt(SB)
+  0x003f JMP	0
 ```
 
 可以看到，栈分裂(stack-split)前导码被分成 prologue 和 epilogue 两个部分:
@@ -189,7 +242,9 @@ $ GOOS=linux GOARCH=amd64 go tool compile -S main.go
 **Prologue**
 
 ```assembly
-0x0000 MOVQ	(TLS), CX   ;; store current *g in CX0x0009 CMPQ	SP, 16(CX)  ;; compare SP and g.stackguard00x000d JLS	58	    ;; jumps to 0x3a if SP <= g.stackguard0
+0x0000 MOVQ	(TLS), CX   ;; store current *g in CX
+0x0009 CMPQ	SP, 16(CX)  ;; compare SP and g.stackguard0
+0x000d JLS	58	    ;; jumps to 0x3a if SP <= g.stackguard0
 ```
 
 `TLS` 是一个由 runtime 维护的虚拟寄存器，保存了指向当前 `g` 的指针，这个 `g` 的数据结构会跟踪 goroutine 运行时的所有状态值。
@@ -197,7 +252,15 @@ $ GOOS=linux GOARCH=amd64 go tool compile -S main.go
 看一看 runtime 源代码中对于 `g` 的定义:
 
 ```go
-type g struct {	stack       stack   // 16 bytes	// stackguard0 is the stack pointer compared in the Go stack growth prologue.	// It is stack.lo+StackGuard normally, but can be StackPreempt to trigger a preemption.	stackguard0 uintptr	stackguard1 uintptr	// ...omitted dozens of fields...}
+type g struct {
+	stack       stack   // 16 bytes
+	// stackguard0 is the stack pointer compared in the Go stack growth prologue.
+	// It is stack.lo+StackGuard normally, but can be StackPreempt to trigger a preemption.
+	stackguard0 uintptr
+	stackguard1 uintptr
+
+	// ...omitted dozens of fields...
+}
 ```
 
 我们可以看到 `16(CX)` 对应的是 `g.stackguard0`，是 runtime 维护的一个阈值，该值会被拿来与栈指针(stack-pointer)进行比较以判断一个 goroutine 是否马上要用完当前的栈空间。
@@ -207,7 +270,9 @@ type g struct {	stack       stack   // 16 bytes	// stackguard0 is the stack poin
 **Epilogue**
 
 ```assembly
-0x003a NOP0x003a CALL	runtime.morestack_noctxt(SB)0x003f JMP	0
+0x003a NOP
+0x003a CALL	runtime.morestack_noctxt(SB)
+0x003f JMP	0
 ```
 
 epilogue 部分的代码就很直来直去了: 它直接调用 runtime 的函数，对应的函数会将栈进行扩张，然后再跳回到函数的第一条指令去(就是指 prologue部分)。
@@ -219,7 +284,21 @@ epilogue 部分的代码就很直来直去了: 它直接调用 runtime 的函数
 之前讲解的是函数的调用，go语言程序中存在更多的是对方法的调用。对方法的调用(无论 receiver 是值类型还是指针类型)和对函数的调用是相同的，唯一的区别是 receiver 会被当作第一个参数传入。
 
 ```go
-package maintype Adder struct{ id int32 }//go:noinlinefunc (adder *Adder) AddPtr(a, b int32) int32 { return a + b }//go:noinlinefunc (adder Adder) AddVal(a, b int32) int32 { return a + b }func main() {	adder := Adder{id: 6754}	adder.AddPtr(10, 32) // 指针receiver调用	adder.AddVal(10, 32) // 值receiver调用}
+package main
+
+type Adder struct{ id int32 }
+
+//go:noinline
+func (adder *Adder) AddPtr(a, b int32) int32 { return a + b }
+
+//go:noinline
+func (adder Adder) AddVal(a, b int32) int32 { return a + b }
+
+func main() {
+	adder := Adder{id: 6754}
+	adder.AddPtr(10, 32) // 指针receiver调用
+	adder.AddVal(10, 32) // 值receiver调用
+}
 ```
 
 ### 指针receiver
@@ -233,7 +312,11 @@ receiver 是通过 `adder := Adder{id: 6754}` 来初始化的：
 上述指令初始化了结构体，栈内存的摆列顺序从低地址到高地值为：函数参数->函数返回值->局部变量（这里省略了return address 和BP）。在这里这个结构体算是一个局部变量，因此被放在了栈的高地址处28(SP)。
 
 ```assembly
-0x0057 LEAQ	"".adder+28(SP), AX	;; move &adder to..0x005c MOVQ	AX, (SP)		;; ..the top of the stack (argument #1)0x0060 MOVQ	$137438953482, AX	;; move (32,10) to..0x006a MOVQ	AX, 8(SP)		;; ..the top of the stack (arguments #3 & #2)0x006f CALL	"".(*Adder).AddPtr(SB)
+0x0057 LEAQ	"".adder+28(SP), AX	;; move &adder to..
+0x005c MOVQ	AX, (SP)		;; ..the top of the stack (argument #1)
+0x0060 MOVQ	$137438953482, AX	;; move (32,10) to..
+0x006a MOVQ	AX, 8(SP)		;; ..the top of the stack (arguments #3 & #2)
+0x006f CALL	"".(*Adder).AddPtr(SB)
 ```
 
 然后对结构体取指针，现在AX存的就是receiver。前面提到receiver要作为第一个参数，于是将AX放在栈的(SP)处，后面的指令就和函数的调用类似了，初始化其他的参数。并使用CALL指令调用`"".(*Adder).AddPtr`
@@ -243,7 +326,10 @@ receiver 是通过 `adder := Adder{id: 6754}` 来初始化的：
 当 receiver 是值类型时，生成的代码和上面的类似。 
 
 ```assembly
-0x003c MOVQ	$42949679714, AX	;; move (10,6754) to..0x0046 MOVQ	AX, (SP)		;; ..the top of the stack (arguments #2 & #1)0x004a MOVL	$32, 8(SP)		;; move 32 to the top of the stack (argument #3)0x0052 CALL	"".Adder.AddVal(SB)
+0x003c MOVQ	$42949679714, AX	;; move (10,6754) to..
+0x0046 MOVQ	AX, (SP)		;; ..the top of the stack (arguments #2 & #1)
+0x004a MOVL	$32, 8(SP)		;; move 32 to the top of the stack (argument #3)
+0x0052 CALL	"".Adder.AddVal(SB)
 ```
 
 因为 receiver 是值类型，且编译器能够通过静态分析推测出其值，这种情况下编译器认为不需要对值从它原来的位置(`28(SP)`)进行拷贝了: 相应的，只要简单的在栈上创建一个新的和 `Adder` 相等的值，把这个操作和传第二个参数的操作进行捆绑，还可以节省一条汇编指令。
