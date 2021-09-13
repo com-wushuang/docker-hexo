@@ -31,5 +31,5 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           port: ${{ secrets.DEPLOY_PORT }}
-        script: |
-          ls -al
+          script: |
+            ls -al
