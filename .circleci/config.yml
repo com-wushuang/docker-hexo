@@ -20,4 +20,5 @@ jobs:
       - run:
           name: Deploy Over SSH
           command: |
-            ssh -p $SSH_PORT $SSH_USER@$SSH_HOST "docker run -d -p 80:80 --name blog mystchen/blog:latest sh /run.sh"
+            # ssh -p $SSH_PORT $SSH_USER@$SSH_HOST "docker run -d -p 80:80 --name blog mystchen/blog:latest sh /run.sh"
+            ssh -p $SSH_PORT $SSH_USER@$SSH_HOST "echo test"
