@@ -1,9 +1,0 @@
-version: "2"
-
-services:
-  blog:
-    image: mystchen/blog:latest
-    container_name: blog
-    ports:
-      - 80:80
-    restart: always

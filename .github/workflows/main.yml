@@ -32,4 +32,6 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           port: ${{ secrets.DEPLOY_PORT }}
           script: |
-            docker restart blog
+            docker stop blog
+            docker rm blog
+            docker run -d -p 80:80 --name blog mystchen/blog:latest sh /run.sh
