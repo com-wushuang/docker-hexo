@@ -32,4 +32,4 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           port: ${{ secrets.DEPLOY_PORT }}
           script: |
-            ls -al
+            docker restart blog
