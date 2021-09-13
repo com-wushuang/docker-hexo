@@ -38,7 +38,7 @@ type itab struct { // 40 bytes on a 64bit arch
 ```
 
 - `_type` 这个类型是 runtime 对任意 Go 语言类型的内部表示。 `_type` 类型描述了一个“类型”的每一个方面: 类型名字，特性(大小，对齐方式...)，类型的行为(比较，哈希...) 也包含在内了。
-- `interfacetype` 是一个包装了 `_type` 和额外的与 `interface` 相关的信息的字段。 `inter` 字段描述了 interface 本身的类型。
+-  `interfacetype` 是一个包装了 `_type` 和额外的与 `interface` 相关的信息的字段。 `inter` 字段描述了 interface 本身的类型。
 - `func` 数组持有组成该 interface 虚(virtual/dispatch)函数表的的函数的指针。
 
 **`_type` 结构**
@@ -184,13 +184,18 @@ m := Mather(Adder{id: 6754})
 初始化一个接口本质上是需要调用`runtime.onvT2I32()`函数(本例子中是该函数)，源代码如下：
 
 ```go
-func convT2I32(tab *itab, elem unsafe.Pointer) (i iface) {   ...}
+func convT2I32(tab *itab, elem unsafe.Pointer) (i iface) {
+   ...
+}
 ```
 
 可以看到函数的两个参数分别是`itab`指针`*itab`和数据指针`elem`。
 
 ```assembly
-0x0025 LEAQ	go.itab."".Adder,"".Mather(SB), AX0x002c MOVQ	AX, (SP)0x0030 LEAQ	""..autotmp_1+36(SP), AX0x0035 MOVQ	AX, 8(SP)
+0x0025 LEAQ	go.itab."".Adder,"".Mather(SB), AX
+0x002c MOVQ	AX, (SP)
+0x0030 LEAQ	""..autotmp_1+36(SP), AX
+0x0035 MOVQ	AX, 8(SP)
 ```
 
 上述汇编指令就是在准备函数的参数，可以看到编译器已经创建了必要的 `itab`，这里只需要对其取指针就行了。至于两个指针在栈内的先后顺序，参照的依然是go函数调用规约。
@@ -198,7 +203,20 @@ func convT2I32(tab *itab, elem unsafe.Pointer) (i iface) {   ...}
 **调用runtime函数**
 
 ```go
-func convT2I32(tab *itab, elem unsafe.Pointer) (i iface) {    t := tab._type    /* ...omitted debug stuff... */    var x unsafe.Pointer    if *(*uint32)(elem) == 0 {        x = unsafe.Pointer(&zeroVal[0])    } else {        x = mallocgc(4, t, false)        *(*uint32)(x) = *(*uint32)(elem)    }    i.tab = tab    i.data = x    return}
+func convT2I32(tab *itab, elem unsafe.Pointer) (i iface) {
+    t := tab._type
+    /* ...omitted debug stuff... */
+    var x unsafe.Pointer
+    if *(*uint32)(elem) == 0 {
+        x = unsafe.Pointer(&zeroVal[0])
+    } else {
+        x = mallocgc(4, t, false)
+        *(*uint32)(x) = *(*uint32)(elem)
+    }
+    i.tab = tab
+    i.data = x
+    return
+}
 ```
 
 所以 `runtime.convT2I32` 做了 4 件事情:
@@ -217,7 +235,13 @@ func convT2I32(tab *itab, elem unsafe.Pointer) (i iface) {    t := tab._type    
 上面已经讲解了如何初始化接口变量，接着是对方法的间接调用(`m.Add(10, 32)`)的汇编代码：
 
 ```assembly
-0x003f MOVQ	16(SP), AX                          ;; AX 持有 i.tab0x0044 MOVQ	24(SP), CX                          ;; CX 持有 i.data 0x0049 MOVQ	24(AX), AX0x004d MOVQ	$137438953482, DX0x0057 MOVQ	DX, 8(SP)0x005c MOVQ	CX, (SP)0x0060 CALL	AX
+0x003f MOVQ	16(SP), AX                          ;; AX 持有 i.tab
+0x0044 MOVQ	24(SP), CX                          ;; CX 持有 i.data 
+0x0049 MOVQ	24(AX), AX
+0x004d MOVQ	$137438953482, DX
+0x0057 MOVQ	DX, 8(SP)
+0x005c MOVQ	CX, (SP)
+0x0060 CALL	AX
 ```
 
 ```assembly
@@ -227,25 +251,41 @@ func convT2I32(tab *itab, elem unsafe.Pointer) (i iface) {    t := tab._type    
 `runtime.convT2I32` 一返回，`AX` 中就包含了 `i.tab` 的指针；更准确地说是指向 `go.itab."".Adder."".Mather` 的指针。 将 `AX` 解引用，然后向前 offset 24 个字节，我们就可以找到 `i.tab.fun` 的位置了，这个地址对应的是虚表的第一个入口。 下面的代码帮我们回忆一下 `itab` 长啥样:
 
 ```go
-type itab struct { // 32 bytes on a 64bit arch    inter *interfacetype // offset 0x00 ($00)    _type *_type	 // offset 0x08 ($08)    hash  uint32	 // offset 0x10 ($16)    _     [4]byte	 // offset 0x14 ($20)    fun   [1]uintptr	 // offset 0x18 ($24)			 // offset 0x20 ($32)}
+type itab struct { // 32 bytes on a 64bit arch
+    inter *interfacetype // offset 0x00 ($00)
+    _type *_type	 // offset 0x08 ($08)
+    hash  uint32	 // offset 0x10 ($16)
+    _     [4]byte	 // offset 0x14 ($20)
+    fun   [1]uintptr	 // offset 0x18 ($24)
+			 // offset 0x20 ($32)
+}
 ```
 
 `go.itab."".Adder,"".Mather` 这个符号具体内容如下：
 
 ```assembly
-go.itab."".Adder,"".Mather SRODATA dupok size=40    0x0000 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................    0x0010 8a 3d 5f 61 00 00 00 00 00 00 00 00 00 00 00 00  .=_a............    0x0020 00 00 00 00 00 00 00 00                          ........    rel 0+8 t=1 type."".Mather+0    rel 8+8 t=1 type."".Adder+0    rel 24+8 t=1 "".(*Adder).Add+0    rel 32+8 t=1 "".(*Adder).Sub+0
+go.itab."".Adder,"".Mather SRODATA dupok size=40
+    0x0000 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+    0x0010 8a 3d 5f 61 00 00 00 00 00 00 00 00 00 00 00 00  .=_a............
+    0x0020 00 00 00 00 00 00 00 00                          ........
+    rel 0+8 t=1 type."".Mather+0
+    rel 8+8 t=1 type."".Adder+0
+    rel 24+8 t=1 "".(*Adder).Add+0
+    rel 32+8 t=1 "".(*Adder).Sub+0
 ```
 
 从中我们可以知道 `iface.tab.fun[0]` 是指向 `main.(*Adder).add` 的指针
 
 ```assembly
-0x004d MOVQ	$137438953482, DX0x0057 MOVQ	DX, 8(SP)
+0x004d MOVQ	$137438953482, DX
+0x0057 MOVQ	DX, 8(SP)
 ```
 
 将 `10` 和 `32` 作为参数 #2 和 #3 存在栈顶。
 
 ```assembly
-0x005c MOVQ	CX, (SP)0x0060 CALL	AX
+0x005c MOVQ	CX, (SP)
+0x0060 CALL	AX
 ```
 
 `runtime.convT2I32` 一返回， `CX` 寄存器就存了 `i.data`，该指针指向 `Adder` 实例。 我们将该指针移动到栈顶，作为参数 #1，为了能够满足调用规约: receiver 必须作为方法的第一个参数传入。
@@ -257,13 +297,38 @@ go.itab."".Adder,"".Mather SRODATA dupok size=40    0x0000 00 00 00 00 00 00 00 
 ### 类型断言
 
 ```go
-var j uint32var Eface interface{}func assertion() {    i := uint64(42)    Eface = i    j = Eface.(uint32)}
+var j uint32
+var Eface interface{}
+
+func assertion() {
+    i := uint64(42)
+    Eface = i
+    j = Eface.(uint32)
+}
 ```
 
 汇编版本的 `j = Eface.(uint32)`:
 
 ```assembly
-0x0065 00101 MOVQ	"".Eface(SB), AX		;; AX = Eface._type0x006c 00108 MOVQ	"".Eface+8(SB), CX		;; CX = Eface.data0x0073 00115 LEAQ	type.uint32(SB), DX		;; DX = type.uint320x007a 00122 CMPQ	AX, DX				;; Eface._type == type.uint32 ?0x007d 00125 JNE	162				;; no? panic our way outta here0x007f 00127 MOVL	(CX), AX			;; AX = *Eface.data0x0081 00129 MOVL	AX, "".j(SB)			;; j = AX = *Eface.data;; exit0x0087 00135 MOVQ	40(SP), BP0x008c 00140 ADDQ	$48, SP0x0090 00144 RET;; panic: interface conversion: <iface> is <have>, not <want>0x00a2 00162 MOVQ	AX, (SP)			;; have: Eface._type0x00a6 00166 MOVQ	DX, 8(SP)			;; want: type.uint320x00ab 00171 LEAQ	type.interface {}(SB), AX	;; AX = type.interface{} (eface)0x00b2 00178 MOVQ	AX, 16(SP)			;; iface: AX0x00b7 00183 CALL	runtime.panicdottypeE(SB)	;; func panicdottypeE(have, want, iface *_type)0x00bc 00188 UNDEF0x00be 00190 NOP
+0x0065 00101 MOVQ	"".Eface(SB), AX		;; AX = Eface._type
+0x006c 00108 MOVQ	"".Eface+8(SB), CX		;; CX = Eface.data
+0x0073 00115 LEAQ	type.uint32(SB), DX		;; DX = type.uint32
+0x007a 00122 CMPQ	AX, DX				;; Eface._type == type.uint32 ?
+0x007d 00125 JNE	162				;; no? panic our way outta here
+0x007f 00127 MOVL	(CX), AX			;; AX = *Eface.data
+0x0081 00129 MOVL	AX, "".j(SB)			;; j = AX = *Eface.data
+;; exit
+0x0087 00135 MOVQ	40(SP), BP
+0x008c 00140 ADDQ	$48, SP
+0x0090 00144 RET
+;; panic: interface conversion: <iface> is <have>, not <want>
+0x00a2 00162 MOVQ	AX, (SP)			;; have: Eface._type
+0x00a6 00166 MOVQ	DX, 8(SP)			;; want: type.uint32
+0x00ab 00171 LEAQ	type.interface {}(SB), AX	;; AX = type.interface{} (eface)
+0x00b2 00178 MOVQ	AX, 16(SP)			;; iface: AX
+0x00b7 00183 CALL	runtime.panicdottypeE(SB)	;; func panicdottypeE(have, want, iface *_type)
+0x00bc 00188 UNDEF
+0x00be 00190 NOP
 ```
 
 代码比较 `Eface._type` 持有的地址和 `type.uint32` 持有的地址，之前也见过，这是标准库暴露出的全局符号，它持有的 `_type` 结构描述了 `uint32` 这个类型。如果 `_type` 指针匹配，那么我们可以一切正常地将 `*Eface.data` 赋值给 `j`；否则的话，调用 `runtime.panicdottypeE` 来抛出 panic 信息。
@@ -271,13 +336,59 @@ var j uint32var Eface interface{}func assertion() {    i := uint64(42)    Eface 
 ### 类型判断
 
 ```go
-var j uint32var Eface interface{} // outsmart compiler (avoid static inference)func typeSwitch() {    i := uint32(42)    Eface = i    switch v := Eface.(type) {    case uint16:        j = uint32(v)    case uint32:        j = v    }}
+var j uint32
+var Eface interface{} // outsmart compiler (avoid static inference)
+
+func typeSwitch() {
+    i := uint32(42)
+    Eface = i
+    switch v := Eface.(type) {
+    case uint16:
+        j = uint32(v)
+    case uint32:
+        j = v
+    }
+}
 ```
 
 这个简单的类型 switch 语句被翻译成了如下汇编(已注释):
 
 ```assembly
-;; switch v := Eface.(type)0x0065 00101 MOVQ	"".Eface(SB), AX	;; AX = Eface._type0x006c 00108 MOVQ	"".Eface+8(SB), CX	;; CX = Eface.data0x0073 00115 TESTQ	AX, AX			;; Eface._type == nil ?0x0076 00118 JEQ	153			;; yes? exit the switch0x0078 00120 MOVL	16(AX), DX		;; DX = Eface.type._hash;; case uint320x007b 00123 CMPL	DX, $-800397251		;; Eface.type._hash == type.uint32.hash ?0x0081 00129 JNE	163			;; no? go to next case (uint16)0x0083 00131 LEAQ	type.uint32(SB), BX	;; BX = type.uint320x008a 00138 CMPQ	BX, AX			;; type.uint32 == Eface._type ? (hash collision?)0x008d 00141 JNE	206			;; no? clear BX and go to next case (uint16)0x008f 00143 MOVL	(CX), BX		;; BX = *Eface.data0x0091 00145 JNE	163			;; landsite for indirect jump starting at 0x00d30x0093 00147 MOVL	BX, "".j(SB)		;; j = BX = *Eface.data;; exit0x0099 00153 MOVQ	40(SP), BP0x009e 00158 ADDQ	$48, SP0x00a2 00162 RET;; case uint160x00a3 00163 CMPL	DX, $-269349216		;; Eface.type._hash == type.uint16.hash ?0x00a9 00169 JNE	153			;; no? exit the switch0x00ab 00171 LEAQ	type.uint16(SB), DX	;; DX = type.uint160x00b2 00178 CMPQ	DX, AX			;; type.uint16 == Eface._type ? (hash collision?)0x00b5 00181 JNE	199			;; no? clear AX and exit the switch0x00b7 00183 MOVWLZX	(CX), AX		;; AX = uint16(*Eface.data)0x00ba 00186 JNE	153			;; landsite for indirect jump starting at 0x00cc0x00bc 00188 MOVWLZX	AX, AX			;; AX = uint16(AX) (redundant)0x00bf 00191 MOVL	AX, "".j(SB)		;; j = AX = *Eface.data0x00c5 00197 JMP	153			;; we're done, exit the switch;; indirect jump table0x00c7 00199 MOVL	$0, AX			;; AX = $00x00cc 00204 JMP	186			;; indirect jump to 153 (exit)0x00ce 00206 MOVL	$0, BX			;; BX = $00x00d3 00211 JMP	145			;; indirect jump to 163 (case uint16)
+;; switch v := Eface.(type)
+0x0065 00101 MOVQ	"".Eface(SB), AX	;; AX = Eface._type
+0x006c 00108 MOVQ	"".Eface+8(SB), CX	;; CX = Eface.data
+0x0073 00115 TESTQ	AX, AX			;; Eface._type == nil ?
+0x0076 00118 JEQ	153			;; yes? exit the switch
+0x0078 00120 MOVL	16(AX), DX		;; DX = Eface.type._hash
+;; case uint32
+0x007b 00123 CMPL	DX, $-800397251		;; Eface.type._hash == type.uint32.hash ?
+0x0081 00129 JNE	163			;; no? go to next case (uint16)
+0x0083 00131 LEAQ	type.uint32(SB), BX	;; BX = type.uint32
+0x008a 00138 CMPQ	BX, AX			;; type.uint32 == Eface._type ? (hash collision?)
+0x008d 00141 JNE	206			;; no? clear BX and go to next case (uint16)
+0x008f 00143 MOVL	(CX), BX		;; BX = *Eface.data
+0x0091 00145 JNE	163			;; landsite for indirect jump starting at 0x00d3
+0x0093 00147 MOVL	BX, "".j(SB)		;; j = BX = *Eface.data
+;; exit
+0x0099 00153 MOVQ	40(SP), BP
+0x009e 00158 ADDQ	$48, SP
+0x00a2 00162 RET
+;; case uint16
+0x00a3 00163 CMPL	DX, $-269349216		;; Eface.type._hash == type.uint16.hash ?
+0x00a9 00169 JNE	153			;; no? exit the switch
+0x00ab 00171 LEAQ	type.uint16(SB), DX	;; DX = type.uint16
+0x00b2 00178 CMPQ	DX, AX			;; type.uint16 == Eface._type ? (hash collision?)
+0x00b5 00181 JNE	199			;; no? clear AX and exit the switch
+0x00b7 00183 MOVWLZX	(CX), AX		;; AX = uint16(*Eface.data)
+0x00ba 00186 JNE	153			;; landsite for indirect jump starting at 0x00cc
+0x00bc 00188 MOVWLZX	AX, AX			;; AX = uint16(AX) (redundant)
+0x00bf 00191 MOVL	AX, "".j(SB)		;; j = AX = *Eface.data
+0x00c5 00197 JMP	153			;; we're done, exit the switch
+;; indirect jump table
+0x00c7 00199 MOVL	$0, AX			;; AX = $0
+0x00cc 00204 JMP	186			;; indirect jump to 153 (exit)
+0x00ce 00206 MOVL	$0, BX			;; BX = $0
+0x00d3 00211 JMP	145			;; indirect jump to 163 (case uint16)
 ```
 
 1. 加载变量的 `_type`，然后为了以防万一检查 `nil` 指针。
@@ -290,4 +401,3 @@ var j uint32var Eface interface{} // outsmart compiler (avoid static inference)f
 2. 如果 match 的话，直接比较两个 `_type` 指针的内存地址。
 
 由于每一个 `_type` 结构都是由编译器一次性生成，并存储在 `.rodata` 段的全局变量中的，编译器保证每一个类型在程序的生命周期内都有唯一的地址。为什么不直接进行后面这步比较，而去掉哈希比较呢？像简单的类型断言，根本都不会用类型哈希。 个人理解原因：一般情况下，类型判断，只会存在一个匹配的case，那么也就是会存在很多比较，使用hash值，能够快速失败，如果hash值不相等，可以不用比较指针，因为比较指针会用两条指令。这样会提高程序的性能。
-
