@@ -1,3 +1,3 @@
 # docker-hexo
- hexo blog + Drone pipelines
+ hexo blog + github actions
  
