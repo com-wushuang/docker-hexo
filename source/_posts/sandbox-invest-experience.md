@@ -72,11 +72,11 @@ tags:
 
 8月份的时候sandbox已经有很多知名的IP在平台购买了土地，如下：
 
-![image-20211210123709407](image-20211210123709407.png)
+![image-20211210123709407](https://raw.githubusercontent.com/com-wushuang/pics/main/image-20211210123709407.png)
 
 ### 资本
 
-![image-20211210123948116](image-20211210123948116.png)
+![image-20211210123948116](https://raw.githubusercontent.com/com-wushuang/pics/main/image-20211210123948116.png)
 
 ab公司游戏领域巨头、软银资本巨头，可见sandbox背后资本是非常雄厚的。
 

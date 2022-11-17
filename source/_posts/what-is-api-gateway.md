@@ -7,7 +7,7 @@ tags:
 
 在微服务架构中，有多个服务在运行，每个服务都是针对系统的特定的组件而设计的。当客户端（移动应用程序，Web应用程序或第三方应用程序）直接与这些微服务通信时，就会出现许多问题：
 
-![没有网关的微服务架构](没有网关的微服务架构.png)
+![没有网关的微服务架构](https://raw.githubusercontent.com/com-wushuang/pics/main/%E6%B2%A1%E6%9C%89%E7%BD%91%E5%85%B3%E7%9A%84%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84.png)
 
 1. 微服务提供的API的粒度通常与客户端需要的粒度不同。微服务API本质上非常通用且粗糙，仅返回一部分功能数据。客户端的单个操作可能需要调用多个服务。这可能导致客户端和服务器之间进行多次往返网络调用，从而增加了显着的延迟。
 2. 对于不同类型的客户端，网络性能有所不同，例如移动网络速度较慢且延迟较高。 WAN比LAN慢。来自客户端的多个网络请求会产生不一致的体验。
@@ -20,7 +20,7 @@ tags:
 
 API网关可以帮助解决这些挑战。它使客户端与微服务解耦。 API网关位于客户端和服务之间，并且是所有客户端请求的单个入口点。它接收来自客户端的所有请求，然后通过请求路由，组合和协议转换将它们路由到适当的微服务。
 
-![api网关](api网关.png)
+![api网关](https://raw.githubusercontent.com/com-wushuang/pics/main/api%E7%BD%91%E5%85%B3.png)
 
 通常，它通过调用多个服务并汇总结果并将其发送回客户端来处理请求。 API网关具有以下优点：
 
@@ -48,7 +48,7 @@ API网关可以帮助解决这些挑战。它使客户端与微服务解耦。 A
 
 相比于单个API网关的架构，有一种多个网关的架构模式，它为不同的客户端提供不同的网关。这样的目的是根据客户端的需求提供量身定制的API，从而避免为所有客户端提供通用API造成的代码大量膨胀。
 
-![多网关架构](多网关架构.png)
+![多网关架构](https://raw.githubusercontent.com/com-wushuang/pics/main/%E5%A4%9A%E7%BD%91%E5%85%B3%E6%9E%B6%E6%9E%84.png)
 
 ## 著名的API Gateway
 
@@ -58,19 +58,19 @@ Netflix的流媒体服务可在超过1000种不同的设备类型（电视，机
 
 Netflix的Zuul 2是所有进入Netflix云基础架构的请求的front door。 Zuul 2大大改进了架构和功能，使得网关能够处理，路由和保护Netflix的云系统，并帮助为1.25亿会员提供最佳体验。
 
-![zuul网关](zuul网关.png)
+![zuul网关](https://raw.githubusercontent.com/com-wushuang/pics/main/zuul%E7%BD%91%E5%85%B3.png)
 
 ### Amazon API Gateway
 
 AWS提供了用于创建，发布，维护，监控和保护REST，HTTP和WebSocket的完全托管服务，开发人员可以在其中创建用于访问AWS或其他Web服务的API以及存储在AWS Cloud中的数据。
 
-![aws网关](aws网关.png)
+![aws网关](https://raw.githubusercontent.com/com-wushuang/pics/main/aws%E7%BD%91%E5%85%B3.png)
 
 ### Kong API Gateway
 
 Kong Gateway是为微服务优化的开源，轻量级API网关，可提供无与伦比的延迟性能和可伸缩性。如果您只需要基础，kong是非常适合的。通过添加更多节点，可以轻松地水平扩展它。它以非常低的延迟支持大量可变的工作负载。
 
-![kong网关](kong网关.png)
+![kong网关](https://raw.githubusercontent.com/com-wushuang/pics/main/kong%E7%BD%91%E5%85%B3.png)
 
 ### 其他的 API Gateways
 
@@ -95,7 +95,7 @@ API网关的有些请求可以直接映射到单个微服务的API。但是，�
 
 针对如上问题，引入了api聚合层的微服务架构如下：
 
-![引入了聚合层的微服务架构](引入了聚合层的微服务架构.png)
+![引入了聚合层的微服务架构](https://raw.githubusercontent.com/com-wushuang/pics/main/%E5%BC%95%E5%85%A5%E4%BA%86%E8%81%9A%E5%90%88%E5%B1%82%E7%9A%84%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84.png)
 
 # Service Mesh 和 API Gateway
 
@@ -112,7 +112,7 @@ API网关的有些请求可以直接映射到单个微服务的API。但是，�
 
 结合这两种技术可能是一种最佳实践，架构图如下：
 
-![服务治理结合网关技术](服务治理结合网关技术.png)
+![服务治理结合网关技术](https://raw.githubusercontent.com/com-wushuang/pics/main/%E6%9C%8D%E5%8A%A1%E6%B2%BB%E7%90%86%E7%BB%93%E5%90%88%E7%BD%91%E5%85%B3%E6%8A%80%E6%9C%AF.png)
 
 # 参考资料
 

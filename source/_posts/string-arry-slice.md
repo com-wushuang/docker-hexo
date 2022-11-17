@@ -288,7 +288,7 @@ type SliceHeader struct {
 
 #### nil切片和空切片
 
-![nil和empty切片](nil和empty切片.png)
+![nil和empty切片](https://raw.githubusercontent.com/com-wushuang/pics/main/nil%E5%92%8Cempty%E5%88%87%E7%89%87.png)
 
 | 创建方式 | nil切片                | 空切片                    |
 | -------- | ---------------------- | ------------------------- |
@@ -334,7 +334,7 @@ type SliceHeader struct {
 
 #### append
 
-![切片扩容](切片扩容.png)
+![切片扩容](https://raw.githubusercontent.com/com-wushuang/pics/main/%E5%88%87%E7%89%87%E6%89%A9%E5%AE%B9.png)
 
 使用 `append` 关键字向切片中追加元素，如果追加的元素没有超过切片的容量，那么直接在底层数组追加元素即可；如果底层数组容量不够追加元素了，会调用 `runtime.growslice`函数为切片扩容，扩容是为切片分配新的内存空间并拷贝原切片中元素的过程。
 
