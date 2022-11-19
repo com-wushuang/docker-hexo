@@ -28,7 +28,7 @@ tags:
 
 ## 基于session(cookie)的认证
 
-![session](https://raw.githubusercontent.com/com-wushuang/pics/main/session.jpg)
+![session](https://github.com/com-wushuang/pics/blob/main/session.jpg)
 
 基本的步骤：
 
@@ -79,7 +79,7 @@ Token是服务端生成的一串字符串，用作客户端进行请求的一个
 - 服务器端存储方式有很多实现，数据库，内存。
 - 存储在前端的cookie、Storage中存在XSS的风险，安全系数低；现代架构中，客户端一般会做成前后端分离（纯前端和专为前端服务的后端BFF），这时将token存储在客户端的后端中，就会很安全。（引申：这种架构，在选择oauth2.0方式时，应该选择授权码模式；纯前端的客户端选择隐藏模式后面会讲到）
 
-![token_store](https://raw.githubusercontent.com/com-wushuang/pics/main/token_store.png)
+![token_store](https://github.com/com-wushuang/pics/blob/main/token_store.png)
 
 ### token之于服务端和客户端
 

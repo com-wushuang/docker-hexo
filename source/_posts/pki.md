@@ -10,19 +10,19 @@ tags:
 
 ### 窃听
 
-![窃听](https://raw.githubusercontent.com/com-wushuang/pics/main/%E7%AA%83%E5%90%AC.png)
+![窃听](https://github.com/com-wushuang/pics/blob/main/%E7%AA%83%E5%90%AC.png)
 
 A和B之间通过互联网发送数据，网络中可能存在第三者窃听了数据内容。“加密技术”，能够解决这个问题。
 
 ### 篡改
 
-![篡改](https://raw.githubusercontent.com/com-wushuang/pics/main/%E7%AF%A1%E6%94%B9.png)
+![篡改](https://github.com/com-wushuang/pics/blob/main/%E7%AF%A1%E6%94%B9.png)
 
 网络中的第三者不仅窃听了A和B之间的通信数据，甚至有可能将数据的内容篡改了。“消息认证码”、“数字签名技术” 能够解决这个问题。
 
 ### 欺骗
 
-![欺骗](https://raw.githubusercontent.com/com-wushuang/pics/main/%E6%AC%BA%E9%AA%97.png)
+![欺骗](https://github.com/com-wushuang/pics/blob/main/%E6%AC%BA%E9%AA%97.png)
 
 A发送给B数据时，网络中有可能存在第三者冒充了B，让A以为他是在和B通信。相反A也可能被第三者冒充。“消息认证码”、“数字签名技术” 能够解决这个问题。
 
@@ -45,7 +45,7 @@ A给B发送完数据之后，A放坚持说这不是他发送的信息。“数�
 
 ### 对称加密
 
-![对称加密](https://raw.githubusercontent.com/com-wushuang/pics/main/%E5%AF%B9%E7%A7%B0%E5%8A%A0%E5%AF%86.png)
+![对称加密](https://github.com/com-wushuang/pics/blob/main/%E5%AF%B9%E7%A7%B0%E5%8A%A0%E5%AF%86.png)
 
 简介：
 
@@ -62,11 +62,11 @@ A给B发送完数据之后，A放坚持说这不是他发送的信息。“数�
 
 在通信双方建立连接后，发送方需要将双方共用的密钥（不是公钥）发送给接收方，这个时候，网络中的第三者可能会窃听到该密钥，从而通过该密钥解开后续通信过程中的加密数据，“对称加密”需要一种方法来安全的传送密钥。
 
-![对称加密的密钥传送问题](https://raw.githubusercontent.com/com-wushuang/pics/main/%E5%AF%B9%E7%A7%B0%E5%8A%A0%E5%AF%86%E7%9A%84%E5%AF%86%E9%92%A5%E4%BC%A0%E9%80%81%E9%97%AE%E9%A2%98.png)
+![对称加密的密钥传送问题](https://github.com/com-wushuang/pics/blob/main/%E5%AF%B9%E7%A7%B0%E5%8A%A0%E5%AF%86%E7%9A%84%E5%AF%86%E9%92%A5%E4%BC%A0%E9%80%81%E9%97%AE%E9%A2%98.png)
 
 ### 非对称加密
 
-![非对称加密](https://raw.githubusercontent.com/com-wushuang/pics/main/%E9%9D%9E%E5%AF%B9%E7%A7%B0%E5%8A%A0%E5%AF%86.png)
+![非对称加密](https://github.com/com-wushuang/pics/blob/main/%E9%9D%9E%E5%AF%B9%E7%A7%B0%E5%8A%A0%E5%AF%86.png)
 
 简介：
 
@@ -90,7 +90,7 @@ A给B发送完数据之后，A放坚持说这不是他发送的信息。“数�
 - 加密和解密都需要时间，通过混合加密来解决该问题。
 - 公钥的可靠性，双方建立通信时，交换公钥的过程中，网络的第三者x可能会用自己的公钥来替换真实的公钥。这样子，用x的公钥加密过的密文就能够被x的私钥解密。问题的根源在于通信的双发无法确认他们收到的公要是否是真实可靠的。为了解决这个问题，使用了“数字证书”系统。
 
-![非对称加密的公钥持有人问题](https://raw.githubusercontent.com/com-wushuang/pics/main/%E9%9D%9E%E5%AF%B9%E7%A7%B0%E5%8A%A0%E5%AF%86%E7%9A%84%E5%85%AC%E9%92%A5%E6%8C%81%E6%9C%89%E4%BA%BA%E9%97%AE%E9%A2%98.png)
+![非对称加密的公钥持有人问题](https://github.com/com-wushuang/pics/blob/main/%E9%9D%9E%E5%AF%B9%E7%A7%B0%E5%8A%A0%E5%AF%86%E7%9A%84%E5%85%AC%E9%92%A5%E6%8C%81%E6%9C%89%E4%BA%BA%E9%97%AE%E9%A2%98.png)
 
 ### 混合加密
 
@@ -107,13 +107,13 @@ A给B发送完数据之后，A放坚持说这不是他发送的信息。“数�
 
 数字签名机制：
 
-![数字签名](https://raw.githubusercontent.com/com-wushuang/pics/main/%E6%95%B0%E5%AD%97%E7%AD%BE%E5%90%8D.jpeg)
+![数字签名](https://github.com/com-wushuang/pics/blob/main/%E6%95%B0%E5%AD%97%E7%AD%BE%E5%90%8D.jpeg)
 
 ## 数字证书
 
 “非对称加密”和“数字签名”系统存在不能保证公钥属于谁的问题。因为当A试图将公钥发送给B时，网络中的第三方可能会将公钥替换成自己的公钥。通过“数字证书”系统，我们可以保证谁是公钥的创建者。
 
-![公钥持有人难题](https://raw.githubusercontent.com/com-wushuang/pics/main/%E5%85%AC%E9%92%A5%E6%8C%81%E6%9C%89%E4%BA%BA%E9%9A%BE%E9%A2%98.jpeg)
+![公钥持有人难题](https://github.com/com-wushuang/pics/blob/main/%E5%85%AC%E9%92%A5%E6%8C%81%E6%9C%89%E4%BA%BA%E9%9A%BE%E9%A2%98.jpeg)
 
 数字证书的机制：
 
@@ -129,11 +129,11 @@ A给B发送完数据之后，A放坚持说这不是他发送的信息。“数�
 10. 如果验证结果没有问题，那么数字证书无疑是由认证机构签发的，所以数字证书中的PA是可信的
 11. 由此，从A方到B方的公开密钥的交付过程完成
 
-![数字证书](https://raw.githubusercontent.com/com-wushuang/pics/main/%E6%95%B0%E5%AD%97%E8%AF%81%E4%B9%A6.jpeg)
+![数字证书](https://github.com/com-wushuang/pics/blob/main/%E6%95%B0%E5%AD%97%E8%AF%81%E4%B9%A6.jpeg)
 
 在上面的机制中，存在一个问题，B方收到的认证机构的公钥PC，是否真的就是认证机构的公钥呢，因为依然存在被第三方替换的可能性。实际上，认证机构的公钥PC也是作为数字证书的方式被交付的，给认证机构颁发证书的，是更高级别的认证机构，认证机构形成了一个树结构，高级别权威机构为较低级别的机构创建证书。
 
-![CA认证树](https://raw.githubusercontent.com/com-wushuang/pics/main/CA%E8%AE%A4%E8%AF%81%E6%A0%91.jpeg)
+![CA认证树](https://github.com/com-wushuang/pics/blob/main/CA%E8%AE%A4%E8%AF%81%E6%A0%91.jpeg)
 
 客户端服务器场景流程：
 
@@ -141,7 +141,7 @@ A给B发送完数据之后，A放坚持说这不是他发送的信息。“数�
 2. 该证书被称为服务器证书，也是由认证机构颁发的
 3. 在个人场景下，数字证书被绑定到一个电子邮件，但是在服务器证书的情况下，它绑定到一个域。由此来防止第三方欺骗
 
-![服务器证书](https://raw.githubusercontent.com/com-wushuang/pics/main/%E6%9C%8D%E5%8A%A1%E5%99%A8%E8%AF%81%E4%B9%A6.jpeg)
+![服务器证书](https://github.com/com-wushuang/pics/blob/main/%E6%9C%8D%E5%8A%A1%E5%99%A8%E8%AF%81%E4%B9%A6.jpeg)
 
 ## 哈希函数
 
