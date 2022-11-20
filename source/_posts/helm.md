@@ -97,22 +97,27 @@ annotations:
 ## helm 模版
 
 ### helm 内置对象
-- `Release`: 对象描述了版本发布本身。包含了以下对象
-  - `Release.Name`： release名称
-  - `Release.Namespace`： 版本中包含的命名空间(如果manifest没有覆盖的话)
-  - `Release.IsUpgrade`： 如果当前操作是升级或回滚的话，该值将被设置为true
-  - `Release.IsInstall`： 如果当前操作是安装的话，该值将被设置为true
-  - `Release.Revision`： 此次修订的版本号。安装时是1，每次升级或回滚都会自增
-  - `Release.Service`： release 发布的服务
-- `Chart`: Chart.yaml文件内容。 Chart.yaml里的所有数据在这里都可以访问的。 比如 {{ .Chart.Name }}-{{ .Chart.Version }} 会打印出 mychart-0.1.0
-- `Values`: Values对象是从values.yaml文件和用户提供的文件传进模板的。默认为空
-- `Files`: 在chart中提供访问所有的非特殊文件的对象
-- `Capabilities`： 提供关于Kubernetes集群支持功能的信息
-  - `Capabilities.KubeVersion.Major`: Kubernetes的主版本
-  - `Capabilities.KubeVersion.Minor`: Kubernetes的次版本
-- `Template`： 包含当前被执行的当前模板信息
-  - `Template.Name`: 当前模板的命名空间文件路径 (e.g. mychart/templates/mytemplate.yaml)
-  - `Template.BasePath`: 当前chart模板目录的路径 (e.g. mychart/templates)
+`Release`: 对象描述了版本发布本身。包含了以下对象
+- `Release.Name`： release名称
+- `Release.Namespace`： 版本中包含的命名空间(如果manifest没有覆盖的话)
+- `Release.IsUpgrade`： 如果当前操作是升级或回滚的话，该值将被设置为true
+- `Release.IsInstall`： 如果当前操作是安装的话，该值将被设置为true
+- `Release.Revision`： 此次修订的版本号。安装时是1，每次升级或回滚都会自增
+- `Release.Service`： release 发布的服务
+
+`Chart`: Chart.yaml文件内容。 Chart.yaml里的所有数据在这里都可以访问的。 比如 {{ .Chart.Name }}-{{ .Chart.Version }} 会打印出 mychart-0.1.0
+
+`Values`: Values对象是从values.yaml文件和用户提供的文件传进模板的。默认为空
+
+`Files`: 在chart中提供访问所有的非特殊文件的对象
+
+`Capabilities`： 提供关于Kubernetes集群支持功能的信息
+- `Capabilities.KubeVersion.Major`: Kubernetes的主版本
+- `Capabilities.KubeVersion.Minor`: Kubernetes的次版本
+
+`Template`： 包含当前被执行的当前模板信息
+- `Template.Name`: 当前模板的命名空间文件路径 (e.g. mychart/templates/mytemplate.yaml)
+- `Template.BasePath`: 当前chart模板目录的路径 (e.g. mychart/templates)
 
 ### Values 文件
 在模版中，能够引用两类对象，一种是内置对象，一种是Values对象(一定要理解Values文件和Values对象的区别)。Values对象的值来源于如下：
