@@ -2,6 +2,7 @@
 title: go函数和方法调用
 date: 2021-09-13 15:00:38
 tags:
+categories: go
 ---
 ## 目标
 

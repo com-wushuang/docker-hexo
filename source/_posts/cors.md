@@ -2,6 +2,7 @@
 title: cors
 date: 2021-01-14 16:31:50
 tags:
+categories: http
 ---
 
 ![CORS_example](https://raw.githubusercontent.com/com-wushuang/pics/main/CORS_example.png)

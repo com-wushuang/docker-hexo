@@ -2,6 +2,7 @@
 title: cookie
 date: 2021-01-13 16:01:18
 tags:
+categories: http
 ---
 
 ## http状态管理难题

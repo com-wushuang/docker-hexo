@@ -2,6 +2,7 @@
 title: 什么是API Gateway？
 date: 2020-11-26 18:06:13
 tags:
+categories: 架构
 ---
 ## 微服务架构存在的问题
 

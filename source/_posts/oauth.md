@@ -2,6 +2,7 @@
 title: oauth
 date: 2021-01-08 15:18:48
 tags:
+categories: 认证
 ---
 
 ## Hydra

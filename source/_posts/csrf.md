@@ -2,6 +2,7 @@
 title: csrf
 date: 2021-01-12 12:51:11
 tags:
+categories: http
 ---
 
 **跨站请求伪造** ，也被称为 **one-click attack** 或者 **session riding**，通常缩写为 **CSRF** 或者 **XSRF**， 是一种挟制用户在当前已登录的Web应用程序上执行非本意的操作的攻击方法。
