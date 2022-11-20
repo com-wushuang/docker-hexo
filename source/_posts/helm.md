@@ -105,7 +105,7 @@ annotations:
 - `Release.Revision`： 此次修订的版本号。安装时是1，每次升级或回滚都会自增
 - `Release.Service`： release 发布的服务
 
-`Chart`: Chart.yaml文件内容。 Chart.yaml里的所有数据在这里都可以访问的。 比如 {{ .Chart.Name }}-{{ .Chart.Version }} 会打印出 mychart-0.1.0
+`Chart`: Chart.yaml文件内容。 Chart.yaml里的所有数据在这里都可以访问的。 比如 `{{ .Chart.Name }}-{{ .Chart.Version }}` 会打印出 mychart-0.1.0
 
 `Values`: Values对象是从values.yaml文件和用户提供的文件传进模板的。默认为空
 
@@ -344,7 +344,7 @@ data:
     date: {{ now | htmlDate }}
 {{- end }}
 ```
-- 按照惯例,define方法会有个简单的文档块({{/* ... */}})来描述要做的事
+- 按照惯例,define方法会有个简单的文档块(`{{/* ... */}}`)来描述要做的事
 - 模板名称是全局的。因此，如果两个模板使用相同名字声明，会使用最后出现的那个
 
 **template传值**
