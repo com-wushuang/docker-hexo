@@ -1,3 +1,10 @@
+---
+title: PQL
+date: 2021-09-13 15:18:16
+tags:
+categories: prometheus
+---
+
 ## 样本
 - `Prometheus`会将所有采集到的样本数据以时间序列（`time-series`）的方式保存在内存数据库中，并且定时保存到硬盘上。
 - `time-series`是按照时间戳和值的序列顺序存放的，我们称之为向量(`vector`). 每条`time-series`通过指标名称(`metrics name`)和一组标签集(`labelset`)命名。
