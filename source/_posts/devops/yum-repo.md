@@ -1,15 +1,31 @@
 ---
-title: 私有YUM源
+title: YUM
 date: 2022-11-22 10:17:23
 tags:
 categories: devops
 ---
 
+## yum 运行原理
+`yum` 是 `C/S` 架构，一部分是 `yum` 服务器，一部分是`client`的`yum`工具。下面分别介绍两部分工作原理。
+
+### yum服务器
+- 所有要发行的 `rpm` 包都放在 `yum` 服务器上以提供别人来下载。
+- 服务器只要提供简单的下载就可以了，`ftp`或者 `httpd` 的形式都可以。
+- 服务器有一个最重要的环节就是整理出每个 `rpm` 包的基本信息，包括 `rpm` 包对应的版本号， `conf` 文件，`binary`信息，以及很关键的依赖信息。
+- 服务器上提供了`createrepo`工具，用于把`rpm`包的基本概要信息做成一张"清单"，这张"清单""就是描述每个`rpm`包的`spec`文件中信息。
+
+### yum client端
+- `client`每次调用`yum install`或者`search`的时候，都会去解析`/etc/yum.repos.d`下面所有以`.repo`结尾的配置文件，这些配置文件指定了`yum`服务器的地址。
+- `yum` 会定期去"更新" `yum` 服务器上的 `rpm` 包"清单"，然后把"清单"下载保存到 `yum` 自己的 `cache` 里面，根据 `/etc/yum.conf` 里配置(默认是在 `/var/cache/yum` 下面)。
+- 每次调用 `yum` 装包的时候都会去这个 `cache` 目录下去找"清单"，根据"清单"里的 `rpm` 包描述从而来确定安装包的名字，版本号，所需要的依赖包等。
+- 然后再去 `yum` 服务器下载 `rpm` 包安装(前提是不存在rpm包的cache)。
+
+
 ## 搭建局域网yum源
 - 需要在局域网访问，首先需要一个web服务器，比如`apache httpd`或者`nginx`均可以，`centos`默认是安装了`httpd`的，可以直接用这个
 ```
 # 命令启动服务
-systemctl start httpd.service
+systemctl start httpd.service 
 
 # 服务器的根目录在/var/www/html下，可以解析静态页面以及显示目录列表了
 
@@ -91,4 +107,10 @@ yum -y install createrepo
 yum clean all
 
 # 新的rpm包就可以在本地yum源中生效了
+yum makecache
 ```
+
+## yum clean all 原理
+一般yum下载的包和header文件都存储在/var/cache/yum中，所以会越来越大，如果觉得占用磁盘空间过大就可以使用此命令去删除。
+
+## yum makecache 原理
