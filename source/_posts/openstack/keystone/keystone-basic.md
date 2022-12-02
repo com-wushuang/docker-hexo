@@ -1,4 +1,9 @@
- 
+---
+title: Keystone 概述
+date: 2022-11-20 12:23:49
+tags:
+categories: OpenStack
+--- 
 ## Domain，Project，User，Role，Token 的概念和关系
 ![keystone用户体系](https://raw.githubusercontent.com/com-wushuang/pics/main/keystone%E7%94%A8%E6%88%B7%E4%BD%93%E7%B3%BB.png)
 
