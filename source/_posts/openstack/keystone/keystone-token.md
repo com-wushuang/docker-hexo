@@ -1,10 +1,9 @@
 ---
-title: keystone
+title: Keystone 的四种 Token
 date: 2022-11-20 12:23:49
 tags:
+categories: OpenStack
 ---
-
-### Keystone 的四种 Token
 #### 四种 Token 的由来
 - `D` 版本时，仅有 `UUID` 类型的 `Token`，`UUID token` 简单易用，却容易给 `Keystone` 带来性能问题，从上图的步骤 `4` 可看出，每当 `OpenStack API` 收到用户请求，都需要向 `Keystone` 验证该 `token` 是否有效。随着集群规模的扩大，`Keystone` 需处理大量验证 `token` 的请求，在高并发下容易出现性能问题。
 - 于是 `PKI(Public Key Infrastructrue) token` 在 `G` 版本运用而生，和 `UUID` 相比，`PKI token` 携带更多用户信息的同时还附上了数字签名，以支持本地认证，从而避免了步骤 4。 因为 `PKI token` 携带了更多的信息，这些信息就包括 `service catalog`，随着 `OpenStack` 的 `Region` 数增多，`service catalog` 携带的 `endpoint` 数量越多，`PKI token` 也相应增大，很容易超出 `HTTP Server` 允许的最大 `HTTP Header`(默认为 8 KB)，导致 `HTTP` 请求失败。
