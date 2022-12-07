@@ -37,7 +37,7 @@ openstack flavor delete FLAVOR
 ## 和调度相关的 Extra Specs
 ### AggregateInstanceExtraSpecsFilter
 - 匹配 flavor 的 extra specs 和 aggregate 的 metadata
-- 并不是所有的都匹配，匹配的格式如下两类：
+- 匹配的格式如下两类：
     - `"aggregate_instance_extra_specs:key":"value"`(scope format)
     - `"key":"value"`(not scope format):所有这种格式的都会去匹配
 ```python
@@ -86,10 +86,11 @@ openstack flavor delete FLAVOR
 ```
 
 ### ComputeCapabilitiesFilter
+- 官方的文档中说这种调度器往往会和上面的调度器冲突，不建议使用
 - 匹配 flavor 的 extra specs 和 host 的 cap
-- 并不是所有的都匹配，匹配的格式如下两类：
+- 匹配的格式如下两类：
     - `"capabilities:key":"value"`(scope format)
-    - `"key":"value"`(not scope format):并部署所有这种格式的都会去匹配，有些会忽略，可以看代码注释，解释的非常清楚
+    - `"key":"value"`(not scope format):并不是所有这种格式的都会去匹配，有些会忽略，可以看代码注释，解释的非常清楚
 
 ```python
     def _satisfies_extra_specs(self, host_state, flavor):
