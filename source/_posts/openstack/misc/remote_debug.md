@@ -95,3 +95,62 @@ WantedBy = multi-user.target
 ![python_debug_client连接debug_server](https://raw.githubusercontent.com/com-wushuang/pics/main/python_debug_client%E8%BF%9E%E6%8E%A5debug_server.png)
 - 调试变量：
 ![pycharm远程调试变量](https://raw.githubusercontent.com/com-wushuang/pics/main/pycharm%E8%BF%9C%E7%A8%8B%E8%B0%83%E8%AF%95%E5%8F%98%E9%87%8F.png)
+
+## 通用的debug方法
+pycharm 在测试环境 debug 固然方便，但是一旦遇到线上环境网络不通畅的情况，就没法进行debug了。因此还是很有必要掌握通用的debug方法。
+
+### pdb
+pdb 调试时必须要手动启动服务的场景。如果服务是 systemd 管理的方式，那么需要先把服务停掉，然后手动启动，比如在 devstack 环境下调试时：
+- 查看服务启动命令
+```shell
+systemctl show devstack@n-sch.service -p ExecStart
+```
+- 停止服务
+```
+systemctl stop devstack@n-sch.service
+```
+- 设置断点
+```
+import pdb; pdb.set_trace()
+```
+- 手动启动
+```
+/usr/local/bin/nova-scheduler --config-file /etc/nova/nova.conf
+```
+- 有些服务，是在某些 Group 中启动的（比如nova-compute），那么执行方式不一样，先查看 Group
+```
+systemctl cat devstack@n-cpu.service | grep Group
+Group = libvirt
+```
+- 用 sg 工具执行
+```
+sg libvirt -c '/usr/local/bin/nova-compute --config-file /etc/nova/nova-cpu.conf'
+```
+### remote-pdb
+`remote-pdb` 不在乎程序是用什么方式运行的，只要能够能连接到程序就行(源码执行环境能够 pip 安装依赖)。
+- 源码环境安装依赖
+```shell
+pip install remote-pdb
+```
+- 打上断点
+```shell
+from remote_pdb import RemotePdb; RemotePdb('127.0.0.1', 4444).set_trace()
+```
+- telnet 连接
+```
+telnet 127.0.0.1 4444
+```
+
+## pdb 常用命令
+
+|命令	|解释
+| --- | --- |
+|break 或 b |设置断点	设置断点
+|continue 或 c	|继续执行程序
+|list 或 l	|查看当前行的代码段
+|step 或 s	|进入函数
+|return 或 r	|执行代码直到从当前函数返回
+|exit 或 q	|中止并退出
+|next 或 n	|执行下一行
+|pp	|打印变量的值
+|help	|帮助
