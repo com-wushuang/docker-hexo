@@ -28,7 +28,7 @@ pip install setuptools wheel twine
 - demo01: Python 包，往后编写的包和Python文件，都放在这个包下，方便以后打包
 - tests: Python包，一般用于编写一些测试文件，打包源码时，忽略这个包下的所有文件
 
-**first.py 脚本测试**
+**`first.py` 脚本测试**
 ```python
 def test1()
     print('Hello Test1')
@@ -37,7 +37,7 @@ def test2()
     print('Hello Test2')
 ```
 
-##setup.py 配置文件
+## `setup.py` 配置文件
 ```python
 from setuptools import setup, find_packages
 import os
@@ -103,7 +103,7 @@ python setup.py develop
 ```
 
 ## 打包源码
-- 上面开发完项目之后，编写 setup.py 打包配置文件，之后就可以使用 setuptools 打包了，这里打包为 wheel 格式的二进制文件，项目根目录下执行如下命令打包：
+- 上面开发完项目之后，编写 `setup.py` 打包配置文件，之后就可以使用 setuptools 打包了，这里打包为 wheel 格式的二进制文件，项目根目录下执行如下命令打包：
 ```shell
 python setup.py bdist_wheel
 ```
@@ -159,4 +159,154 @@ twine upload dist/demo01-1.0.0-py3-none-any.whl
 - 上传到 pypi 后，就可以在 pypi 上看到项目的信息了，并且可以使用 pip 进行安装使用
 ```shell
 pip install demo01
+```
+
+## pbr
+pbr 是一个对 setuptools 加强的插件，通过它可以将 setup 函数所需的参数放在一个统一的配置文件中集中管理，此外它也带有自动化管理项目版本的功能。pbr 来自于openstack 社区。
+
+**最小化的 `setup.py` 文件**
+```python
+import setuptools
+
+setuptools.setup(
+    setup_requires=['pbr>=2.0.0'],
+    pbr=True)
+```
+
+**`setup.py` 所需的实际元数据存储在 `setup.cfg`**
+```ini
+[metadata]
+name = nova
+summary = Cloud computing fabric controller
+description-file =
+    README.rst
+author = OpenStack
+author-email = openstack-dev@lists.openstack.org
+home-page = https://docs.openstack.org/nova/latest/
+classifier =
+    Environment :: OpenStack
+    Intended Audience :: Information Technology
+    Intended Audience :: System Administrators
+    License :: OSI Approved :: Apache Software License
+    Operating System :: POSIX :: Linux
+    Programming Language :: Python
+    Programming Language :: Python :: 2
+    Programming Language :: Python :: 2.7
+    Programming Language :: Python :: 3
+    Programming Language :: Python :: 3.5
+
+[global]
+setup-hooks =
+    pbr.hooks.setup_hook
+
+[files]
+data_files =
+    etc/nova =
+        etc/nova/api-paste.ini
+        etc/nova/rootwrap.conf
+    etc/nova/rootwrap.d = etc/nova/rootwrap.d/*
+packages =
+    nova
+
+[entry_points]
+oslo.config.opts =
+    nova.conf = nova.conf.opts:list_opts
+
+oslo.config.opts.defaults =
+    nova.conf = nova.common.config:set_middleware_defaults
+
+oslo.policy.enforcer =
+    nova = nova.policy:get_enforcer
+
+oslo.policy.policies =
+    # The sample policies will be ordered by entry point and then by list
+    # returned from that entry point. If more control is desired split out each
+    # list_rules method into a separate entry point rather than using the
+    # aggregate method.
+    nova = nova.policies:list_rules
+
+nova.compute.monitors.cpu =
+    virt_driver = nova.compute.monitors.cpu.virt_driver:Monitor
+
+console_scripts =
+    nova-api = nova.cmd.api:main
+    nova-api-metadata = nova.cmd.api_metadata:main
+    nova-api-os-compute = nova.cmd.api_os_compute:main
+    nova-cells = nova.cmd.cells:main
+    nova-compute = nova.cmd.compute:main
+    nova-conductor = nova.cmd.conductor:main
+    nova-console = nova.cmd.console:main
+    nova-consoleauth = nova.cmd.consoleauth:main
+    nova-dhcpbridge = nova.cmd.dhcpbridge:main
+    nova-manage = nova.cmd.manage:main
+    nova-network = nova.cmd.network:main
+    nova-novncproxy = nova.cmd.novncproxy:main
+    nova-policy = nova.cmd.policy:main
+    nova-rootwrap = oslo_rootwrap.cmd:main
+    nova-rootwrap-daemon = oslo_rootwrap.cmd:daemon
+    nova-scheduler = nova.cmd.scheduler:main
+    nova-serialproxy = nova.cmd.serialproxy:main
+    nova-spicehtml5proxy = nova.cmd.spicehtml5proxy:main
+    nova-status = nova.cmd.status:main
+    nova-xvpvncproxy = nova.cmd.xvpvncproxy:main
+    ceph-to-local = nova.cmd.ceph_to_local:main
+    local-to-ceph = nova.cmd.local_to_ceph:main
+    nova-vcpupin = nova.cmd.vcpupin:main
+wsgi_scripts =
+    nova-placement-api = nova.api.openstack.placement.wsgi:init_application
+    nova-api-wsgi = nova.api.openstack.compute.wsgi:init_application
+    nova-metadata-wsgi = nova.api.metadata.wsgi:init_application
+
+nova.ipv6_backend =
+    rfc2462 = nova.ipv6.rfc2462
+    account_identifier = nova.ipv6.account_identifier
+
+nova.scheduler.host_manager =
+    host_manager = nova.scheduler.host_manager:HostManager
+    # Deprecated starting from the 17.0.0 Queens release.
+    ironic_host_manager = nova.scheduler.ironic_host_manager:IronicHostManager
+
+nova.scheduler.driver =
+    filter_scheduler = nova.scheduler.filter_scheduler:FilterScheduler
+    caching_scheduler = nova.scheduler.caching_scheduler:CachingScheduler
+    chance_scheduler = nova.scheduler.chance:ChanceScheduler
+    fake_scheduler = nova.tests.unit.scheduler.fakes:FakeScheduler
+
+[build_sphinx]
+all_files = 1
+build-dir = doc/build
+source-dir = doc/source
+warning-is-error = 1
+
+[build_apiguide]
+all_files = 1
+build-dir = api-guide/build
+source-dir = api-guide/source
+
+[egg_info]
+tag_build =
+tag_date = 0
+tag_svn_revision = 0
+
+[compile_catalog]
+directory = nova/locale
+domain = nova
+
+[update_catalog]
+domain = nova
+output_dir = nova/locale
+input_file = nova/locale/nova.pot
+
+[extract_messages]
+keywords = _ gettext ngettext l_ lazy_gettext
+mapping_file = babel.cfg
+output_file = nova/locale/nova.pot
+
+[wheel]
+universal = 1
+
+[extras]
+osprofiler =
+  osprofiler>=1.4.0 # Apache-2.0
+
 ```
