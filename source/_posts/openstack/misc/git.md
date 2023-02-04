@@ -4,7 +4,6 @@ date: 2023-02-03 15:18:17
 tags:
 categories: OpenStack
 ---
-
 ## git 如何打patch
 
 ### 创建 patch
