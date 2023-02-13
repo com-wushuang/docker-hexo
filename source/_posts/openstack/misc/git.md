@@ -33,3 +33,8 @@ git apply --check newpatch.patch
 ```shell
 git apply newpatch.patch
 ```
+
+### 撤销 patch
+```
+git apply -R newpatch.patch
+```
