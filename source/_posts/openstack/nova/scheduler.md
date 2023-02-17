@@ -48,7 +48,7 @@ $ openstack image show Win-2012
 ## AggregateInstanceExtraSpecsFilter
 - host 属于 aggregate 
 - instance 的 flavor 中定义了extra specs
-- 匹配 aggregate 的 properties 和 instance 的 extra specs，可作为候选节点
+- 匹配 aggregate 的 properties 和 flavor 的 extra specs，可作为候选节点
 
 ## AllHostsFilter
 - 不做任何操作，全部通过
