@@ -1,4 +1,5 @@
 ---
+<<<<<<< HEAD
 title:  nova 调度解析
 date: 2023-02-28 15:18:16
 tags:
@@ -138,8 +139,12 @@ oslo_concurrency.lockutils        Lock "(u'sh11-compute-s3-10e5e12e26', u'sh11-c
 oslo_messaging.rpc.server        Replied incoming message with id 4b6022ed7d7744089c896ef2d07cb39a and method: select_destinations. Time elapsed: 1.278
 ```
 
+<<<<<<< HEAD
 ## 从源码层面解析
 
 ## 调度涉及的其他服务
 
 ## 调度涉及的数据库模型
+=======
+## 从源码层面解析
+>>>>>>> 61153643721c8e283e72609c148962fa6ba6b34c
