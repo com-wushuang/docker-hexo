@@ -1,181 +1,141 @@
 ---
-title:  nova scheduler
+title:  nova 调度代码解析
 date: 2022-12-06 15:18:16
 tags:
 categories: OpenStack
 ---
 
-## AggregateImagePropertiesIsolation
-- host 属于某一个 aggregate
-- aggregate 的 properties定义了镜像类型
-- 匹配 aggregate 的 properties 和 instance 指定的镜像的 properties，可作为候选节点
-- host 不属于任何 aggregate，可作为候选节点
+## 基本概念
+https://developer.aliyun.com/article/237364
+### 调度器
 
-```shell
-$ openstack aggregate show myWinAgg
-+-------------------+----------------------------+
-| Field             | Value                      |
-+-------------------+----------------------------+
-| availability_zone | zone1                      |
-| created_at        | 2017-01-01T15:36:44.000000 |
-| deleted           | False                      |
-| deleted_at        | None                       |
-| hosts             | ['sf-devel']               |
-| id                | 1                          |
-| name              | myWinAgg                   |
-| properties        | os_distro='windows'        |
-| updated_at        | None                       |
-+-------------------+----------------------------+
+### 过滤调度器
+
+### 过滤器
+
+## 创建虚拟机时序图
+![instance_create_flow](https://raw.githubusercontent.com/com-wushuang/pics/main/instance_create_flow.png)
+
+## 调度器工作时序图
+调度器工作的时序图如下：
+![how_scheduler_work](https://raw.githubusercontent.com/com-wushuang/pics/main/how_scheduler_work.png)
+
+## 从日志层面解析调度流程
+1、起点 `nova.scheduler.manager::SchedulerManager:select_destinations`
+```
+nova.scheduler.manager        Starting to schedule for instances: [u'3a09fd41-b36b-438d-9f59-35a98524165f'] select_destinations /usr/lib/python2.7/site-packages/nova/scheduler/manager.py:276
+```
+2、请求`Placement API`获取候选节点
+```
+nova.scheduler.client.report        Make a GET http request to /allocation_candidates?limit=1000&resources=INSTANCE%3A1%2CMEMORY_MB%3A1024%2CVCPU%3A1, request_id is req-61c3be56-ccba-4248-b04c-fb4448aace99. get /usr/lib/python2.7/site-packages/nova/scheduler/client/report.py:295
+```
+3、`nova.scheduler.filter_scheduler::FilterScheduler:_schedule` 调度器的主逻辑
+
+4、`nova.scheduler.filter_scheduler::FilterScheduler:_get_all_host_states` 查询`compute_nodes` 并更新 `host_state`
+
+```
+nova.scheduler.host_manager        Getting compute nodes and services for cell 00000000-0000-0000-0000-000000000000(cell0) _get_computes_for_cells /usr/lib/python2.7/site-packages/nova/scheduler/host_manager.py:649
+oslo_concurrency.lockutils        Lock "00000000-0000-0000-0000-000000000000" acquired by "nova.context.get_or_set_cached_cell_and_set_connections" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "00000000-0000-0000-0000-000000000000" released by "nova.context.get_or_set_cached_cell_and_set_connections" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+nova.scheduler.host_manager        Getting compute nodes and services for cell 432015b0-14e9-4e81-96eb-2ec36d79773b(cell1) _get_computes_for_cells /usr/lib/python2.7/site-packages/nova/scheduler/host_manager.py:649
+oslo_concurrency.lockutils        Lock "432015b0-14e9-4e81-96eb-2ec36d79773b" acquired by "nova.context.get_or_set_cached_cell_and_set_connections" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "432015b0-14e9-4e81-96eb-2ec36d79773b" released by "nova.context.get_or_set_cached_cell_and_set_connections" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-m3-10e5e12e18', u'sh11-compute-m3-10e5e12e18')" acquired by "nova.scheduler.host_manager._locked_update" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-m3-10e5e12e18', u'sh11-compute-m3-10e5e12e18')" released by "nova.scheduler.host_manager._locked_update" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-m3-10e5e12e17', u'sh11-compute-m3-10e5e12e17')" acquired by "nova.scheduler.host_manager._locked_update" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-m3-10e5e12e17', u'sh11-compute-m3-10e5e12e17')" released by "nova.scheduler.host_manager._locked_update" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-s3-10e5e12e25', u'sh11-compute-s3-10e5e12e25')" acquired by "nova.scheduler.host_manager._locked_update" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-s3-10e5e12e25', u'sh11-compute-s3-10e5e12e25')" released by "nova.scheduler.host_manager._locked_update" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-m3-10e5e12e19', u'sh11-compute-m3-10e5e12e19')" acquired by "nova.scheduler.host_manager._locked_update" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-m3-10e5e12e19', u'sh11-compute-m3-10e5e12e19')" released by "nova.scheduler.host_manager._locked_update" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-m3-10e5e12e22', u'sh11-compute-m3-10e5e12e22')" acquired by "nova.scheduler.host_manager._locked_update" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-m3-10e5e12e22', u'sh11-compute-m3-10e5e12e22')" released by "nova.scheduler.host_manager._locked_update" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-s3-10e5e12e26', u'sh11-compute-s3-10e5e12e26')" acquired by "nova.scheduler.host_manager._locked_update" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-s3-10e5e12e26', u'sh11-compute-s3-10e5e12e26')" released by "nova.scheduler.host_manager._locked_update" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-m3-10e5e12e21', u'sh11-compute-m3-10e5e12e21')" acquired by "nova.scheduler.host_manager._locked_update" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-m3-10e5e12e21', u'sh11-compute-m3-10e5e12e21')" released by "nova.scheduler.host_manager._locked_update" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-m3-10e5e12e20', u'sh11-compute-m3-10e5e12e20')" acquired by "nova.scheduler.host_manager._locked_update" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-m3-10e5e12e20', u'sh11-compute-m3-10e5e12e20')" released by "nova.scheduler.host_manager._locked_update" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-s3-10e5e12e29', u'sh11-compute-s3-10e5e12e29')" acquired by "nova.scheduler.host_manager._locked_update" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-s3-10e5e12e29', u'sh11-compute-s3-10e5e12e29')" released by "nova.scheduler.host_manager._locked_update" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-m3-10e5e12e23', u'sh11-compute-m3-10e5e12e23')" acquired by "nova.scheduler.host_manager._locked_update" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-m3-10e5e12e23', u'sh11-compute-m3-10e5e12e23')" released by "nova.scheduler.host_manager._locked_update" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-s3-10e5e12e28', u'sh11-compute-s3-10e5e12e28')" acquired by "nova.scheduler.host_manager._locked_update" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-s3-10e5e12e28', u'sh11-compute-s3-10e5e12e28')" released by "nova.scheduler.host_manager._locked_update" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+oslo_concurrency.lockutils        Lock "(u'sh11-nfvm-compute-10e5e12e33', u'sh11-nfvm-compute-10e5e12e33')" acquired by "nova.scheduler.host_manager._locked_update" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "(u'sh11-nfvm-compute-10e5e12e33', u'sh11-nfvm-compute-10e5e12e33')" released by "nova.scheduler.host_manager._locked_update" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+oslo_concurrency.lockutils        Lock "(u'sh11-nfvm-compute-10e5e12e32', u'sh11-nfvm-compute-10e5e12e32')" acquired by "nova.scheduler.host_manager._locked_update" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "(u'sh11-nfvm-compute-10e5e12e32', u'sh11-nfvm-compute-10e5e12e32')" released by "nova.scheduler.host_manager._locked_update" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-fc1-10e5e12e14', u'sh11-compute-fc1-10e5e12e14')" acquired by "nova.scheduler.host_manager._locked_update" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-fc1-10e5e12e14', u'sh11-compute-fc1-10e5e12e14')" released by "nova.scheduler.host_manager._locked_update" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-fc1-10e5e12e16', u'sh11-compute-fc1-10e5e12e16')" acquired by "nova.scheduler.host_manager._locked_update" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-fc1-10e5e12e16', u'sh11-compute-fc1-10e5e12e16')" released by "nova.scheduler.host_manager._locked_update" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-fc1-10e5e12e15', u'sh11-compute-fc1-10e5e12e15')" acquired by "nova.scheduler.host_manager._locked_update" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-fc1-10e5e12e15', u'sh11-compute-fc1-10e5e12e15')" released by "nova.scheduler.host_manager._locked_update" :: held 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+```
+5、`nova.scheduler.filter_scheduler::FilterScheduler:_get_sorted_hosts` 执行每一个过滤器，过滤节点
+```
+nova.filters        Starting with 16 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:70
+nova.filters        Filter RetryFilter returned 16 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.scheduler.filters.availability_zone_filter        Availability Zone 'SERIES-3-ZONE' requested. (sh11-nfvm-compute-10e5e12e33, sh11-nfvm-compute-10e5e12e33) ram: 232312MB disk: 242563072MB io_ops: 0 instances: 8 has AZs: set([u'cnp_sdn-NOVA-AZ2']) host_passes /usr/lib/python2.7/site-packages/nova/scheduler/filters/availability_zone_filter.py:61
+nova.scheduler.filters.availability_zone_filter        Availability Zone 'SERIES-3-ZONE' requested. (sh11-compute-fc1-10e5e12e15, sh11-compute-fc1-10e5e12e15) ram: 153738MB disk: 242563072MB io_ops: 0 instances: 0 has AZs: set([u'FEITENG-ZONE']) host_passes /usr/lib/python2.7/site-packages/nova/scheduler/filters/availability_zone_filter.py:61
+nova.scheduler.filters.availability_zone_filter        Availability Zone 'SERIES-3-ZONE' requested. (sh11-nfvm-compute-10e5e12e32, sh11-nfvm-compute-10e5e12e32) ram: 248696MB disk: 242563072MB io_ops: 0 instances: 6 has AZs: set([u'cnp_sdn-NOVA-AZ1']) host_passes /usr/lib/python2.7/site-packages/nova/scheduler/filters/availability_zone_filter.py:61
+nova.scheduler.filters.availability_zone_filter        Availability Zone 'SERIES-3-ZONE' requested. (sh11-compute-fc1-10e5e12e16, sh11-compute-fc1-10e5e12e16) ram: 153738MB disk: 242563072MB io_ops: 0 instances: 0 has AZs: set([u'FEITENG-ZONE']) host_passes /usr/lib/python2.7/site-packages/nova/scheduler/filters/availability_zone_filter.py:61
+nova.scheduler.filters.availability_zone_filter        Availability Zone 'SERIES-3-ZONE' requested. (sh11-compute-fc1-10e5e12e14, sh11-compute-fc1-10e5e12e14) ram: 137354MB disk: 242563072MB io_ops: 0 instances: 1 has AZs: set([u'FEITENG-ZONE']) host_passes /usr/lib/python2.7/site-packages/nova/scheduler/filters/availability_zone_filter.py:61
+nova.filters        Filter AvailabilityZoneFilter returned 11 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.filters        Filter AggregateRamFilter returned 11 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.filters        Filter AggregateDiskFilter returned 11 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.filters        Filter ComputeFilter returned 11 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.filters        Filter ComputeCapabilitiesFilter returned 11 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.filters        Filter ImagePropertiesFilter returned 11 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.filters        Filter ServerGroupAntiAffinityFilter returned 11 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.filters        Filter ServerGroupAffinityFilter returned 11 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.filters        Filter AggregateCoreFilter returned 11 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.filters        Filter NumInstancesFilter returned 11 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.filters        Filter SameHostFilter returned 11 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.filters        Filter DifferentHostFilter returned 11 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.filters        Filter LocalDiskFilter returned 11 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.filters        Filter DedicatedCloudFilter returned 11 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.scheduler.filters.aggregate_instance_extra_specs        (sh11-compute-m3-10e5e12e22, sh11-compute-m3-10e5e12e22) ram: 126071MB disk: 242563072MB io_ops: 0 instances: 5 fails instance_type extra_specs requirements. 'set([u'cm3-optimized'])' do not match 's3-public' host_passes /usr/lib/python2.7/site-packages/nova/scheduler/filters/aggregate_instance_extra_specs.py:83
+nova.scheduler.filters.aggregate_instance_extra_specs        (sh11-compute-m3-10e5e12e18, sh11-compute-m3-10e5e12e18) ram: 126071MB disk: 242563072MB io_ops: 0 instances: 6 fails instance_type extra_specs requirements. 'set([u'cm3-optimized'])' do not match 's3-public' host_passes /usr/lib/python2.7/site-packages/nova/scheduler/filters/aggregate_instance_extra_specs.py:83
+nova.scheduler.filters.aggregate_instance_extra_specs        (sh11-compute-m3-10e5e12e17, sh11-compute-m3-10e5e12e17) ram: 257143MB disk: 242563072MB io_ops: 0 instances: 4 fails instance_type extra_specs requirements. 'set([u'cm3-optimized'])' do not match 's3-public' host_passes /usr/lib/python2.7/site-packages/nova/scheduler/filters/aggregate_instance_extra_specs.py:83
+nova.scheduler.filters.aggregate_instance_extra_specs        (sh11-compute-m3-10e5e12e20, sh11-compute-m3-10e5e12e20) ram: 388215MB disk: 242563072MB io_ops: 0 instances: 1 fails instance_type extra_specs requirements. 'set([u'cm3-optimized'])' do not match 's3-public' host_passes /usr/lib/python2.7/site-packages/nova/scheduler/filters/aggregate_instance_extra_specs.py:83
+nova.scheduler.filters.aggregate_instance_extra_specs        (sh11-compute-m3-10e5e12e21, sh11-compute-m3-10e5e12e21) ram: 257143MB disk: 242563072MB io_ops: 0 instances: 2 fails instance_type extra_specs requirements. 'set([u'cm3-optimized'])' do not match 's3-public' host_passes /usr/lib/python2.7/site-packages/nova/scheduler/filters/aggregate_instance_extra_specs.py:83
+nova.scheduler.filters.aggregate_instance_extra_specs        (sh11-compute-m3-10e5e12e23, sh11-compute-m3-10e5e12e23) ram: 289911MB disk: 242585600MB io_ops: 1 instances: 4 fails instance_type extra_specs requirements. 'set([u'cm3-optimized'])' do not match 's3-public' host_passes /usr/lib/python2.7/site-packages/nova/scheduler/filters/aggregate_instance_extra_specs.py:83
+nova.scheduler.filters.aggregate_instance_extra_specs        (sh11-compute-m3-10e5e12e19, sh11-compute-m3-10e5e12e19) ram: 27767MB disk: 242563072MB io_ops: 0 instances: 6 fails instance_type extra_specs requirements. 'set([u'cm3-optimized'])' do not match 's3-public' host_passes /usr/lib/python2.7/site-packages/nova/scheduler/filters/aggregate_instance_extra_specs.py:83
+nova.filters        Filter AggregateInstanceExtraSpecsFilter returned 4 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.filters        Filter PciPassthroughFilter returned 4 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.filters        Filter VGPUFilter returned 4 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.virt.hardware        Attempting to fit instance cell InstanceNUMACell(cpu_pinning_raw=None,cpu_policy=None,cpu_thread_policy=None,cpu_topology=<?>,cpuset=set([0]),cpuset_reserved=None,id=0,memory=1024,pagesize=1048576) on host_cell NUMACell(cpu_usage=86,cpuset=set([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81]),id=0,memory=257180,memory_usage=187392,mempages=[NUMAPagesTopology,NUMAPagesTopology],pinned_cpus=set([]),siblings=[set([24,80]),set([63,7]),set([0,56]),set([5,61]),set([18,74]),set([60,4]),set([17,73]),set([16,72]),set([13,69]),set([21,77]),set([78,22]),set([10,66]),set([25,81]),set([9,65]),set([1,57]),set([8,64]),set([67,11]),set([68,12]),set([75,19]),set([70,14]),set([59,3]),set([76,20]),set([71,15]),set([79,23]),set([2,58]),set([62,6])]) _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:977
+nova.virt.hardware        No pinning requested, considering limitations on usable cpu and memory _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:1002
+nova.virt.hardware        Selected memory pagesize: 1048576 kB. Requested memory pagesize: 1048576 (small = -1, large = -2, any = -3) _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:1033
+nova.virt.hardware        Attempting to fit instance cell InstanceNUMACell(cpu_pinning_raw=None,cpu_policy=None,cpu_thread_policy=None,cpu_topology=<?>,cpuset=set([0]),cpuset_reserved=None,id=0,memory=1024,pagesize=1048576) on host_cell NUMACell(cpu_usage=61,cpuset=set([28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109]),id=1,memory=258011,memory_usage=181248,mempages=[NUMAPagesTopology,NUMAPagesTopology],pinned_cpus=set([]),siblings=[set([33,89]),set([32,88]),set([43,99]),set([44,100]),set([37,93]),set([46,102]),set([36,92]),set([47,103]),set([39,95]),set([45,101]),set([35,91]),set([28,84]),set([31,87]),set([42,98]),set([30,86]),set([41,97]),set([40,96]),set([29,85]),set([51,107]),set([50,106]),set([52,108]),set([49,105]),set([48,104]),set([38,94]),set([53,109]),set([34,90])]) _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:977
+nova.virt.hardware        No pinning requested, considering limitations on usable cpu and memory _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:1002
+nova.virt.hardware        Selected memory pagesize: 1048576 kB. Requested memory pagesize: 1048576 (small = -1, large = -2, any = -3) _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:1033
+nova.virt.hardware        Attempting to fit instance cell InstanceNUMACell(cpu_pinning_raw=None,cpu_policy=None,cpu_thread_policy=None,cpu_topology=<?>,cpuset=set([0]),cpuset_reserved=None,id=0,memory=1024,pagesize=1048576) on host_cell NUMACell(cpu_usage=84,cpuset=set([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81]),id=0,memory=257180,memory_usage=204800,mempages=[NUMAPagesTopology,NUMAPagesTopology],pinned_cpus=set([]),siblings=[set([24,80]),set([7,63]),set([0,56]),set([5,61]),set([18,74]),set([4,60]),set([17,73]),set([16,72]),set([13,69]),set([21,77]),set([22,78]),set([10,66]),set([25,81]),set([9,65]),set([1,57]),set([8,64]),set([11,67]),set([12,68]),set([19,75]),set([14,70]),set([3,59]),set([20,76]),set([15,71]),set([23,79]),set([2,58]),set([6,62])]) _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:977
+nova.virt.hardware        No pinning requested, considering limitations on usable cpu and memory _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:1002
+nova.virt.hardware        Selected memory pagesize: 1048576 kB. Requested memory pagesize: 1048576 (small = -1, large = -2, any = -3) _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:1033
+nova.virt.hardware        Attempting to fit instance cell InstanceNUMACell(cpu_pinning_raw=None,cpu_policy=None,cpu_thread_policy=None,cpu_topology=<?>,cpuset=set([0]),cpuset_reserved=None,id=0,memory=1024,pagesize=1048576) on host_cell NUMACell(cpu_usage=73,cpuset=set([28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109]),id=1,memory=258011,memory_usage=205824,mempages=[NUMAPagesTopology,NUMAPagesTopology],pinned_cpus=set([]),siblings=[set([33,89]),set([32,88]),set([43,99]),set([44,100]),set([37,93]),set([46,102]),set([36,92]),set([47,103]),set([39,95]),set([45,101]),set([35,91]),set([28,84]),set([31,87]),set([42,98]),set([30,86]),set([41,97]),set([40,96]),set([29,85]),set([51,107]),set([50,106]),set([52,108]),set([49,105]),set([48,104]),set([38,94]),set([53,109]),set([34,90])]) _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:977
+nova.virt.hardware        No pinning requested, considering limitations on usable cpu and memory _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:1002
+nova.virt.hardware        Host does not support requested memory pagesize. Requested: 1048576 kB _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:1027
+nova.virt.hardware        Attempting to fit instance cell InstanceNUMACell(cpu_pinning_raw=None,cpu_policy=None,cpu_thread_policy=None,cpu_topology=<?>,cpuset=set([0]),cpuset_reserved=None,id=0,memory=1024,pagesize=1048576) on host_cell NUMACell(cpu_usage=70,cpuset=set([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81]),id=0,memory=257180,memory_usage=190464,mempages=[NUMAPagesTopology,NUMAPagesTopology],pinned_cpus=set([]),siblings=[set([24,80]),set([7,63]),set([0,56]),set([5,61]),set([18,74]),set([4,60]),set([17,73]),set([16,72]),set([13,69]),set([21,77]),set([22,78]),set([10,66]),set([25,81]),set([9,65]),set([1,57]),set([8,64]),set([11,67]),set([12,68]),set([19,75]),set([14,70]),set([3,59]),set([20,76]),set([15,71]),set([23,79]),set([2,58]),set([6,62])]) _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:977
+nova.virt.hardware        No pinning requested, considering limitations on usable cpu and memory _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:1002
+nova.virt.hardware        Selected memory pagesize: 1048576 kB. Requested memory pagesize: 1048576 (small = -1, large = -2, any = -3) _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:1033
+nova.filters        Filter NUMATopologyFilter returned 4 host(s) get_filtered_objects /usr/lib/python2.7/site-packages/nova/filters.py:104
+nova.scheduler.filter_scheduler        Filtered [(sh11-compute-s3-10e5e12e25, sh11-compute-s3-10e5e12e25) ram: 27767MB disk: 242563072MB io_ops: 0 instances: 21, (sh11-compute-s3-10e5e12e26, sh11-compute-s3-10e5e12e26) ram: 36983MB disk: 242563072MB io_ops: 0 instances: 14, (sh11-compute-s3-10e5e12e28, sh11-compute-s3-10e5e12e28) ram: 28791MB disk: 242563072MB io_ops: 0 instances: 16, (sh11-compute-s3-10e5e12e29, sh11-compute-s3-10e5e12e29) ram: 24695MB disk: 242563072MB io_ops: 0 instances: 20] _get_sorted_hosts /usr/lib/python2.7/site-packages/nova/scheduler/filter_scheduler.py:432
+nova.scheduler.filter_scheduler        Weighed [(sh11-compute-s3-10e5e12e26, sh11-compute-s3-10e5e12e26) ram: 36983MB disk: 242563072MB io_ops: 0 instances: 14, (sh11-compute-s3-10e5e12e28, sh11-compute-s3-10e5e12e28) ram: 28791MB disk: 242563072MB io_ops: 0 instances: 16, (sh11-compute-s3-10e5e12e25, sh11-compute-s3-10e5e12e25) ram: 27767MB disk: 242563072MB io_ops: 0 instances: 21, (sh11-compute-s3-10e5e12e29, sh11-compute-s3-10e5e12e29) ram: 24695MB disk: 242563072MB io_ops: 0 instances: 20] _get_sorted_hosts /usr/lib/python2.7/site-packages/nova/scheduler/filter_scheduler.py:452
+```
+6、`nova.scheduler.utils:claim_resources` 调用 `Placement API` 去 `claim resource`.
+```
+nova.scheduler.utils        Attempting to claim resources in the placement API for instance 3a09fd41-b36b-438d-9f59-35a98524165f claim_resources /usr/lib/python2.7/site-packages/nova/scheduler/utils.py:814
+nova.scheduler.client.report        Make a GET http request to /allocations/3a09fd41-b36b-438d-9f59-35a98524165f, request_id is req-61c3be56-ccba-4248-b04c-fb4448aace99. get /usr/lib/python2.7/site-packages/nova/scheduler/client/report.py:295
+nova.scheduler.filter_scheduler        Selected host: (sh11-compute-s3-10e5e12e26, sh11-compute-s3-10e5e12e26) ram: 36983MB disk: 242563072MB io_ops: 0 instances: 14 _consume_selected_host /usr/lib/python2.7/site-packages/nova/scheduler/filter_scheduler.py:337
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-s3-10e5e12e26', u'sh11-compute-s3-10e5e12e26')" acquired by "nova.scheduler.host_manager._locked" :: waited 0.000s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:273
+nova.virt.hardware        Attempting to fit instance cell InstanceNUMACell(cpu_pinning_raw=None,cpu_policy=None,cpu_thread_policy=None,cpu_topology=<?>,cpuset=set([0]),cpuset_reserved=None,id=0,memory=1024,pagesize=1048576) on host_cell NUMACell(cpu_usage=61,cpuset=set([28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109]),id=1,memory=258011,memory_usage=181248,mempages=[NUMAPagesTopology,NUMAPagesTopology],pinned_cpus=set([]),siblings=[set([33,89]),set([32,88]),set([43,99]),set([44,100]),set([37,93]),set([46,102]),set([36,92]),set([47,103]),set([39,95]),set([45,101]),set([35,91]),set([28,84]),set([31,87]),set([42,98]),set([30,86]),set([41,97]),set([40,96]),set([29,85]),set([51,107]),set([50,106]),set([52,108]),set([49,105]),set([48,104]),set([38,94]),set([53,109]),set([34,90])]) _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:977
+nova.virt.hardware        No pinning requested, considering limitations on usable cpu and memory _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:1002
+nova.virt.hardware        Selected memory pagesize: 1048576 kB. Requested memory pagesize: 1048576 (small = -1, large = -2, any = -3) _numa_fit_instance_cell /usr/lib/python2.7/site-packages/nova/virt/hardware.py:1033
+oslo_concurrency.lockutils        Lock "(u'sh11-compute-s3-10e5e12e26', u'sh11-compute-s3-10e5e12e26')" released by "nova.scheduler.host_manager._locked" :: held 0.005s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
+oslo_messaging.rpc.server        Replied incoming message with id 4b6022ed7d7744089c896ef2d07cb39a and method: select_destinations. Time elapsed: 1.278
 ```
 
-```shell
-$ openstack image show Win-2012
-+------------------+------------------------------------------------------+
-| Field            | Value                                                |
-+------------------+------------------------------------------------------+
-| checksum         | ee1eca47dc88f4879d8a229cc70a07c6                     |
-| container_format | bare                                                 |
-| created_at       | 2016-12-13T09:30:30Z                                 |
-| disk_format      | qcow2                                                |
-| ...                                                                     |
-| name             | Win-2012                                             |
-| ...                                                                     |
-| properties       | os_distro='windows'                                  |
-| ...                                                                     |
-```
-- 假设创建虚拟选择了 Win-2012 镜像，镜像 Win-2012 有 os_distro='windows' 这个属性，节点 sf-devel 能够成为调度的候选节点。
-
-## AggregateInstanceExtraSpecsFilter
-- host 属于 aggregate 
-- instance 的 flavor 中定义了extra specs
-- 匹配 aggregate 的 properties 和 flavor 的 extra specs，可作为候选节点
-
-## AllHostsFilter
-- 不做任何操作，全部通过
-
-## AvailabilityZoneFilter
-- 保证 instance 的 az 和 host 的 az 一致
-
-## ComputeFilter
-- 所有的计算节点都是候选节点
-
-## DifferentHostFilter
-- 保证 instance 调度到与指定 instance 不同的 host 上
-- 携带参数，格式如下：
-
-```shell
-# 和8c19174f-4220-44f0-824a-cd1eeef10287 、a0cf03a5-d921-4877-bb5c-86d26cf818e1 两个 instance 不在同一个 host
-$ openstack server create \
-  --image cedef40a-ed67-4d10-800e-17455edce175 --flavor 1 \
-  --hint different_host=a0cf03a5-d921-4877-bb5c-86d26cf818e1 \
-  --hint different_host=8c19174f-4220-44f0-824a-cd1eeef10287 \
-  server-1
-```
-- api 请求格式如下：
-```json
-{
-    "server": {
-        "name": "server-1",
-        "imageRef": "cedef40a-ed67-4d10-800e-17455edce175",
-        "flavorRef": "1"
-    },
-    "os:scheduler_hints": {
-        "different_host": [
-            "a0cf03a5-d921-4877-bb5c-86d26cf818e1",
-            "8c19174f-4220-44f0-824a-cd1eeef10287"
-        ]
-    }
-}
-```
-## SameHostFilter
-- 保证 instance 调度到与指定 instance 不同的 host 上
-- 携带参数，格式如下：
-```shell
-$ openstack server create \
-  --image cedef40a-ed67-4d10-800e-17455edce175 --flavor 1 \
-  --hint same_host=a0cf03a5-d921-4877-bb5c-86d26cf818e1 \
-  --hint same_host=8c19174f-4220-44f0-824a-cd1eeef10287 \
-  server-1
-```
-- api 请求格式如下：
-```json
-{
-    "server": {
-        "name": "server-1",
-        "imageRef": "cedef40a-ed67-4d10-800e-17455edce175",
-        "flavorRef": "1"
-    },
-    "os:scheduler_hints": {
-        "same_host": [
-            "a0cf03a5-d921-4877-bb5c-86d26cf818e1",
-            "8c19174f-4220-44f0-824a-cd1eeef10287"
-        ]
-    }
-}
-```
-
-## ImagePropertiesFilter
-- 镜像的 properties 是否和 host 的 properties 一致
-- 主要查看如下属性:
-    - hw_architecture : 例如 i686, x86_64, arm, ppc64
-    - img_hv_type: 例如 qemu and hyperv.
-    - img_hv_requested_version: 镜像需要的 hypervisor 版本，只对HyperV 这种类型的 hypervisor 有效
-    - hw_vm_mode: describes the hypervisor application binary interface (ABI) required by the image. 
-
-## IsolatedHostsFilter
-- 设置一些隔离的 host
-- 设置一些隔离的 image
-- 选择这些 image 的 instance 只能调度到这些 host 上
-- 在配置文件中配置
-
-```ini
-[filter_scheduler]
-isolated_hosts = server1, server2
-isolated_images = 342b492c-128f-4a42-8d3a-c5088cf27d13, ebd267a6-ca86-4d6c-9a0e-bd132d6b7d09
-```
-## ServerGroupAffinityFilter
-- 让同属于一个亲和组的 instance 调度到相同的 host 上
-```shell
-$ openstack server group create --policy affinity group-1
-$ openstack server create --image IMAGE_ID --flavor 1 \
-  --hint group=SERVER_GROUP_UUID server-1
-```
-
-## ServerGroupAntiAffinityFilter
-- 让属于同一个反亲和组的 instance 调度到不同节点上
-```shell
-$ openstack server group create --policy anti-affinity group-1
-$ openstack server create --image IMAGE_ID --flavor 1 \
-  --hint group=SERVER_GROUP_UUID server-1
-```
-
-## SimpleCIDRAffinityFilter
-- 根据网段调度 instance
-```shell
-$ openstack server create \
-  --image cedef40a-ed67-4d10-800e-17455edce175 --flavor 1 \
-  --hint build_near_host_ip=192.168.1.1 --hint cidr=/24 \
-  server-1
-```
-- api 参数格式如下：
-```shell
-{
-    "server": {
-        "name": "server-1",
-        "imageRef": "cedef40a-ed67-4d10-800e-17455edce175",
-        "flavorRef": "1"
-    },
-    "os:scheduler_hints": {
-        "build_near_host_ip": "192.168.1.1",
-        "cidr": "24"
-    }
-}
-```
-## NumInstancesFilter
-- 如果 host 上已存在的 instance 数量超过限制，那么不作为候选节点
-- 数值配置在 conf 文件中，filter_scheduler.max_instances_per_host
-
-## NUMATopologyFilter
-- 根据 NUMA 拓扑来调度 instance，这些指标存在于：
-    - flavor 的 extra_specs
-    - image 的 properties
+## 从源码层面解析
