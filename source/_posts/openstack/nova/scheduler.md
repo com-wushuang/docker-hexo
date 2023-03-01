@@ -7,12 +7,29 @@ categories: OpenStack
 ---
 
 ## 基本概念
-https://developer.aliyun.com/article/237364
 ### 调度器
+1、调度器：调度 Instance 在哪一个 Host 上运行的方式。目前 Nova 中实现的调度器方式由下列几种：
+- `ChanceScheduler(随机调度器)`：从所有正常运行 `nova-compute` 服务的 `Host Node` 中随机选取来创建 `Instance`
+- `FilterScheduler(过滤调度器)`：根据指定的过滤条件以及权重来挑选最佳创建 `Instance` 的 `Host Node`
+- `Caching(缓存调度器)`：是 `FilterScheduler` 中的一种，在其基础上将 `Host` 资源信息缓存到本地的内存中，然后通过后台的定时任务从数据库中获取最新的 `Host` 资源信息。
+
+2、为了便于扩展，Nova 将一个调度器必须要实现的接口提取出来成为 `nova.scheduler.driver.Scheduler`，只要继承了该类并实现其中的接口，我们就可以自定义调度器。
+
+3、注意：不同的调度器并不能共存，需要在 `/etc/nova/nova.conf` 中的选项指定使用哪一个调度器。默认为 `FilterScheduler` 。
+
+```
+scheduler_driver = nova.scheduler.filter_scheduler.FilterScheduler
+```
 
 ### 过滤调度器
+1、`FilterScheduler` 首先使用指定的 `Filters(过滤器)` 过滤符合条件的 `Host`，然后对得到的 `Host` 列表计算 `Weighting` 权重并排序，获得最佳的 `Host` 。
+![filterschedulerworkflow](https://raw.githubusercontent.com/com-wushuang/pics/main/filterschedulerworkflow.png)
 
-### 过滤器
+2、过滤调度器主要由多个过滤器组成：过滤器都在 `nova.scheduler.filters` 路径下
+
+### 代码架构图
+![nova调度器代码架构](https://raw.githubusercontent.com/com-wushuang/pics/main/nova%E8%B0%83%E5%BA%A6%E5%99%A8%E4%BB%A3%E7%A0%81%E6%9E%B6%E6%9E%84.png)
+
 
 ## 创建虚拟机时序图
 ![instance_create_flow](https://raw.githubusercontent.com/com-wushuang/pics/main/instance_create_flow.png)
@@ -138,13 +155,293 @@ nova.virt.hardware        Selected memory pagesize: 1048576 kB. Requested memory
 oslo_concurrency.lockutils        Lock "(u'sh11-compute-s3-10e5e12e26', u'sh11-compute-s3-10e5e12e26')" released by "nova.scheduler.host_manager._locked" :: held 0.005s inner /usr/lib/python2.7/site-packages/oslo_concurrency/lockutils.py:285
 oslo_messaging.rpc.server        Replied incoming message with id 4b6022ed7d7744089c896ef2d07cb39a and method: select_destinations. Time elapsed: 1.278
 ```
+## 从源码层面解析调度流程
+### 阶段一、请求流转
+- 调用链：`nova-conductor ==> RPC scheduler_client.select_destinations() ==> nova-sechduler`
+- 发起方 `nova-conductor`的函数调用链如下：
+```python
+#nova.conductor.manager.ComputeTaskManager:build_instances()
 
-<<<<<<< HEAD
-## 从源码层面解析
+    def build_instances(self, context, instances, image, filter_properties,
+            admin_password, injected_files, requested_networks,
+            security_groups, block_device_mapping=None, legacy_bdm=True,
+            request_spec=None, host_lists=None):
+
+        # get appropriate hosts for the request.
+        host_lists = self._schedule_instances(context, spec_obj, instance_uuids, return_alternates=True)
+
+
+    def _schedule_instances(self, context, request_spec,
+                            instance_uuids=None, return_alternates=False):
+        scheduler_utils.setup_instance_group(context, request_spec)
+        host_lists = self.scheduler_client.select_destinations(context,
+                request_spec, instance_uuids, return_objects=True,
+                return_alternates=return_alternates)
+        return host_lists
+```
+- RPC scheduler_client.select_destinations() 函数调用链如下：
+```python
+# nova.scheduler.client.query.SchedulerQueryClient:select_destinations()
+
+from nova.scheduler import rpcapi as scheduler_rpcapi
+
+class SchedulerQueryClient(object):
+    """Client class for querying to the scheduler."""
+
+    def __init__(self):
+        self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
+
+    def select_destinations(self, context, spec_obj, instance_uuids,
+            return_objects=False, return_alternates=False):    
+        LOG.debug("SchedulerQueryClient starts to make a RPC call.")
+        return self.scheduler_rpcapi.select_destinations(context, spec_obj,
+                instance_uuids, return_objects, return_alternates)
+
+
+# nova.scheduler.rpcapi.SchedulerAPI:select_destinations()
+
+    def select_destinations(self, ctxt, request_spec, filter_properties):
+        cctxt = self.client.prepare(version='4.5')
+        return cctxt.call(ctxt, 'select_destinations', **msg_args)
+```
+### 阶段二：RPC 请求到达 nova-scheduler 服务 SchedulerManager
+```python
+# nova.scheduler.manager.SchedulerManager:select_destinations()
+class SchedulerManager(manager.Manager):
+    """Chooses a host to run instances on."""
+
+    target = messaging.Target(version='4.5')
+
+    def __init__(self, scheduler_driver=None, *args, **kwargs):
+        if not scheduler_driver:
+            scheduler_driver = CONF.scheduler_driver
+        # 可以看出这里的 driver 是通过配置文件中的选项值指定的类来返回的对象 EG.nova.scheduler.filter_scheduler.FilterScheduler
+        self.driver = driver.DriverManager(
+                "nova.scheduler.driver",
+                scheduler_driver,
+                invoke_on_load=True).driver
+        super(SchedulerManager, self).__init__(service_name='scheduler',
+                                               *args, **kwargs)
+
+
+    def select_destinations(self, ctxt, request_spec=None,
+            filter_properties=None, spec_obj=_sentinel, instance_uuids=None,
+            return_objects=False, return_alternates=False):
+        # get allocation candidates from nova placement api 获取候选节点
+        res = self.placement_client.get_allocation_candidates(ctxt,resources)
+        
+        (alloc_reqs, provider_summaries,allocation_request_version) = res
+
+        selections = self.driver.select_destinations(ctxt, spec_obj,
+                instance_uuids, alloc_reqs_by_rp_uuid, provider_summaries,
+                allocation_request_version, return_alternates)
+```
+- 关键函数：`self.placement_client.get_allocation_candidates(ctxt,resources)` 调用 `nova-placement api` 获得候选节点
+### 阶段三：从 SchedulerManager 到调度器 FilterScheduler
+**宏观流程** 
+```python
+# nova.scheduler.filter_scheduler.FilterScheduler:select_destinations()
+
+class FilterScheduler(driver.Scheduler):
+    """Scheduler that can be used for filtering and weighing."""
+    def __init__(self, *args, **kwargs):
+        super(FilterScheduler, self).__init__(*args, **kwargs)
+        self.notifier = rpc.get_notifier('scheduler')
+        scheduler_client = client.SchedulerClient()
+        self.placement_client = scheduler_client.reportclient
+
+    def select_destinations(self, context, spec_obj, instance_uuids,
+            alloc_reqs_by_rp_uuid, provider_summaries,
+            allocation_request_version=None, return_alternates=False):
+
+        self.notifier.info(
+            context, 'scheduler.select_destinations.start',
+            dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
+
+        host_selections = self._schedule(context, spec_obj, instance_uuids,
+                alloc_reqs_by_rp_uuid, provider_summaries,
+                allocation_request_version, return_alternates)
+        self.notifier.info(
+            context, 'scheduler.select_destinations.end',
+            dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
+        return host_selections
+
+
+    def _schedule(self, context, spec_obj, instance_uuids,
+            alloc_reqs_by_rp_uuid, provider_summaries,
+            allocation_request_version=None, return_alternates=False):
+        
+        # context 升级权限
+        elevated = context.elevated()
+
+        # 获取候选节点的状态，并不是获取集群所有节点的状态
+        hosts = self._get_all_host_states(elevated, spec_obj,
+            provider_summaries)
+
+        # 需要创建的 Instances 的数量
+        num_instances = (len(instance_uuids) if instance_uuids
+                         else spec_obj.num_instances)
+
+        # 记录已经在 placement API 成功 claimed 的 instances.
+        # 如果调度的过程失败了，便于回滚 placement API 数据
+        claimed_instance_uuids = []
+
+        # 记录已经在 placement API 成功 claimed 的 hosts
+        claimed_hosts = []
+
+        for num in range(num_instances):
+            hosts = self._get_sorted_hosts(spec_obj, hosts, num)
+            if not hosts:
+                # 批量创建有一个调度失败，那么就直接跳出循环
+                # 也就是说openstack的保证了批量创建的所有虚拟机都成功调度
+                break
+
+
+            instance_uuid = instance_uuids[num]
+
+            # 调用 placement API 去 claim resource
+            claimed_host = None
+            for host in hosts:
+                cn_uuid = host.uuid
+                if cn_uuid not in alloc_reqs_by_rp_uuid:
+                    msg = ("A host state with uuid = '%s' that did not have a "
+                          "matching allocation_request was encountered while "
+                          "scheduling. This host was skipped.")
+                    LOG.debug(msg, cn_uuid)
+                    continue
+
+                alloc_reqs = alloc_reqs_by_rp_uuid[cn_uuid]
+                alloc_req = alloc_reqs[0]
+                if utils.claim_resources(elevated, self.placement_client,
+                        spec_obj, instance_uuid, alloc_req,
+                        allocation_request_version=allocation_request_version):
+                    claimed_host = host
+                    break
+
+            if claimed_host is None:
+                LOG.debug("Unable to successfully claim against any host.")
+                break
+
+            claimed_instance_uuids.append(instance_uuid)
+            claimed_hosts.append(claimed_host)
+
+            # 更新被选中的 host 的 host_state,下一个虚拟机在被调度的时候就是新的host_state
+            self._consume_selected_host(claimed_host, spec_obj)
+
+            # For the live-resize instance local, consume selected host,
+            # allocate numa_topology failed raise no valid host.
+            if utils.request_is_live_resize(spec_obj) and \
+                    claimed_host.host == spec_obj.original_instance.host \
+                    and (not spec_obj.numa_topology):
+                reason = "The numa topology allocated insuffecient."
+                raise exception.NoValidHost(reason=reason)
+        # 检查调度选择出的节点数量和虚拟机的数量一直，如果不一致，则清理资源
+        self._ensure_sufficient_hosts(context, claimed_hosts, num_instances,
+                claimed_instance_uuids)
+
+        # We have selected and claimed hosts for each instance. Now we need to
+        # find alternates for each host.
+        selections_to_return = self._get_alternate_hosts(
+            claimed_hosts, spec_obj, hosts, num, num_alts,
+            alloc_reqs_by_rp_uuid, allocation_request_version)
+        return selections_to_return
+```
+**微观三个重要的函数**
+1. `_get_all_host_states`:获取所有的 Host 状态，并且将初步满足条件的 Hosts 过滤出来。
+2. `get_filtered_hosts`:使用 Filters 过滤器将第一个函数返回的 hosts 进行再一次过滤。
+3. `get_weighed_hosts`:通过 Weighed 选取最优 Host。
+
+#### _get_all_host_states 函数
+
+- `host_manager` 是 `nova.scheduler.driver.Scheduler` 的成员变量
+```python
+# nova.scheduler.driver.Scheduler:__init__()
+
+# nova.scheduler.filter_scheduler.FilterScheduler 继承了 nova.scheduler.driver.Scheduler
+ class Scheduler(object):
+     """The base class that all Scheduler classes should inherit from."""
+
+     def __init__(self):
+         # 从这里知道 host_manager 会根据配置文件动态导入
+         self.host_manager = importutils.import_object(
+                 CONF.scheduler_host_manager)
+         self.servicegroup_api = servicegroup.API()
+```
+- `_get_all_host_states` 调用成员变量`host_manager`的函数如下：
+```python
+    def _get_all_host_states(self, context, spec_obj, provider_summaries):
+        compute_uuids = None
+        if provider_summaries is not None:
+            compute_uuids = list(provider_summaries.keys())
+        return self.host_manager.get_host_states_by_uuids(context,compute_uuids,spec_obj)
+```
+-  `host_manager`的`get_host_states_by_uuids`函数如下：
+```python
+    def get_host_states_by_uuids(self, context, compute_uuids, spec_obj):
+
+        self._load_cells(context)
+        if (spec_obj and 'requested_destination' in spec_obj and
+                spec_obj.requested_destination and
+                'cell' in spec_obj.requested_destination):
+            only_cell = spec_obj.requested_destination.cell
+        else:
+            only_cell = None
+
+        if only_cell:
+            cells = [only_cell]
+        else:
+            cells = self.cells
+
+        # 查询 compute_nodes 信息，然后作为参数继续调用
+        compute_nodes, services = self._get_computes_for_cells(
+            context, cells, compute_uuids=compute_uuids)
+        return self._get_host_states(context, compute_nodes, services)
+```
+- `_get_host_states` 函数如下：
+```python
+    def _get_host_states(self, context, compute_nodes, services):
+        """Returns a generator over HostStates given a list of computes.
+
+        Also updates the HostStates internal mapping for the HostManager.
+        """
+        # Get resource usage across the available compute nodes:
+        host_state_map = {}
+        seen_nodes = set()
+        for cell_uuid, computes in compute_nodes.items():
+            for compute in computes:
+                service = services.get(compute.host)
+
+                if not service:
+                    LOG.warning(_LW(
+                        "No compute service record found for host %(host)s"),
+                        {'host': compute.host})
+                    continue
+                host = compute.host
+                node = compute.hypervisor_hostname
+                state_key = (host, node)
+                host_state = host_state_map.get(state_key)
+                if not host_state:
+                    host_state = self.host_state_cls(host, node,
+                                                     cell_uuid,
+                                                     compute=compute)
+                    host_state_map[state_key] = host_state
+                # We force to update the aggregates info each time a
+                # new request comes in, because some changes on the
+                # aggregates could have been happening after setting
+                # this field for the first time
+                host_state.update(compute,
+                                  dict(service),
+                                  self._get_aggregates_info(host),
+                                  self._get_instance_info(context, compute))
+
+                seen_nodes.add(state_key)
+
+        return (host_state_map[host] for host in seen_nodes)
+```
+- 总结：`_get_all_host_states` 函数主要的作用就是查询 compute_nodes 信息（从数据库）。然后存储在 `HostState` 类中
 
 ## 调度涉及的其他服务
+### nova placement api
 
 ## 调度涉及的数据库模型
-=======
-## 从源码层面解析
->>>>>>> 61153643721c8e283e72609c148962fa6ba6b34c
+### compute_nodes
