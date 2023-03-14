@@ -1,5 +1,4 @@
 ---
-<<<<<<< HEAD
 title:  nova 调度解析
 date: 2023-02-28 15:18:16
 tags:
@@ -346,10 +345,9 @@ class FilterScheduler(driver.Scheduler):
             alloc_reqs_by_rp_uuid, allocation_request_version)
         return selections_to_return
 ```
-**微观三个重要的函数**
+**微观两个重要的函数**
 1. `_get_all_host_states`:获取所有的 Host 状态，并且将初步满足条件的 Hosts 过滤出来。
-2. `get_filtered_hosts`:使用 Filters 过滤器将第一个函数返回的 hosts 进行再一次过滤。
-3. `get_weighed_hosts`:通过 Weighed 选取最优 Host。
+2. `_get_sorted_hosts`:使用 Filters 过滤器将第一个函数返回的 hosts 进行再一次过滤，然后通过 Weighed 选取最优 Host。
 
 #### _get_all_host_states 函数
 
@@ -440,8 +438,110 @@ class FilterScheduler(driver.Scheduler):
 ```
 - 总结：`_get_all_host_states` 函数主要的作用就是查询 compute_nodes 信息（从数据库）。然后存储在 `HostState` 类中
 
+#### _get_sorted_hosts 函数
+```python
+    def _get_sorted_hosts(self, spec_obj, host_states, index):
+        filtered_hosts = self.host_manager.get_filtered_hosts(host_states,
+            spec_obj, index)
+
+        weighed_hosts = self.host_manager.get_weighed_hosts(filtered_hosts,
+            spec_obj)
+```
+
 ## 调度涉及的其他服务
 ### nova placement api
-
-## 调度涉及的数据库模型
-### compute_nodes
+#### 1、Get allocation candidates
+- **接口描述**:选取资源分配候选者
+- **接口地址**:GET /placement/allocation_candidates
+- **请求参数**：resources=DISK_GB:1,MEMORY_MB:512,VCPU:1
+- **请求示例**:
+```shell
+curl -H "x-auth-token:$(openstack token issue | awk '/ id /{print $(NF-1)}')" -H 'OpenStack-API-Version: placement 1.17' 'http://nova-placement-api.cty.os:10013/allocation_candidates?limit=1000&resources=INSTANCE:10,MEMORY_MB:4096,VCPU:4' | python -m json.tool
+```
+- **响应示例**:
+```json
+{
+    "provider_summaries": {
+        "4cae2ef8-30eb-4571-80c3-3289e86bd65c": {
+            "resources": {
+                "VCPU": {
+                    "used": 2,
+                    "capacity": 64
+                },
+                "MEMORY_MB": {
+                    "used": 1024,
+                    "capacity": 11374
+                },
+                "DISK_GB": {
+                    "used": 2,
+                    "capacity": 49
+                }
+            }
+        }
+    },
+    "allocation_requests": [
+        {
+            "allocations": [
+                {
+                    "resource_provider": {
+                        "uuid": "4cae2ef8-30eb-4571-80c3-3289e86bd65c"
+                    },
+                    "resources": {
+                        "VCPU": 1,
+                        "MEMORY_MB": 512,
+                        "DISK_GB": 1
+                    }
+                }
+            ]
+        }
+    ]
+}
+```
+#### 2、Claim Resources
+- **接口描述**:分配资源
+- **接口地址**:/allocations/{consumer_uuid}
+- **请求参数**: POST
+```json
+{
+  "allocations": {
+    "4e061c03-611e-4caa-bf26-999dcff4284e": {
+      "resources": {
+        "DISK_GB": 20
+      }
+    },
+    "89873422-1373-46e5-b467-f0c5e6acf08f": {
+      "resources": {
+        "MEMORY_MB": 1024,
+        "VCPU": 1
+      }
+    }
+  },
+  "consumer_generation": 1,
+  "user_id": "66cb2f29-c86d-47c3-8af5-69ae7b778c70",
+  "project_id": "42a32c07-3eeb-4401-9373-68a8cdca6784",
+  "consumer_type": "INSTANCE"
+}
+```
+- **响应示例**:
+```json
+{
+  "allocations": {
+    "4e061c03-611e-4caa-bf26-999dcff4284e": {
+      "resources": {
+        "DISK_GB": 20
+      }
+    },
+    "89873422-1373-46e5-b467-f0c5e6acf08f": {
+      "resources": {
+        "MEMORY_MB": 1024,
+        "VCPU": 1
+      }
+    }
+  },
+  "consumer_generation": 1,
+  "user_id": "66cb2f29-c86d-47c3-8af5-69ae7b778c70",
+  "project_id": "42a32c07-3eeb-4401-9373-68a8cdca6784",
+  "consumer_type": "INSTANCE"
+}
+```
+## 调度设计的数据库模型
