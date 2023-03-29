@@ -544,4 +544,4 @@ curl -H "x-auth-token:$(openstack token issue | awk '/ id /{print $(NF-1)}')" -H
   "consumer_type": "INSTANCE"
 }
 ```
-## 调度设计的数据库模型
+## 调度涉及的数据库模型
