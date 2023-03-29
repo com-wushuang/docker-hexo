@@ -1,5 +1,5 @@
 ---
-title:  nova 块设备
+title:  nova 创建虚机时的块设备处理
 date: 2023-03-28 15:18:17
 tags:
 categories: OpenStack

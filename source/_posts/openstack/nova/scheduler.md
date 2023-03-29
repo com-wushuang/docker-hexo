@@ -1,5 +1,5 @@
 ---
-title:  nova 调度解析
+title:  nova 创建虚机时的调度解析
 date: 2023-02-28 15:18:16
 tags:
 categories: OpenStack
