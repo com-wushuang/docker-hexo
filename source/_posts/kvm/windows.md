@@ -1,3 +1,10 @@
+---
+title: kvm 安装 windows
+date: 2023-04-25 11:18:16
+tags:
+categories: kvm
+---
+
 ## 创建 windows 虚拟机
 ```shell
 virt-install \

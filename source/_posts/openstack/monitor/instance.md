@@ -1,5 +1,9 @@
-# 云主机监控
-
+---
+title: 云主机监控
+date: 2023-04-25 11:20:16
+tags:
+categories: openstack
+---
 ## 基于 libvirt
 - `libvirt` 是使用最广泛的 `KVM` 管理工具（应用程序接口）就是 `libvirt` `。Libvirt` 提供了操作 `KVM` 的原生层接口，可以实现对虚拟机的基本管理操作。
 - `Libvirt` 库用 `C` 实现，且包含对 `python` 的直接支持。
