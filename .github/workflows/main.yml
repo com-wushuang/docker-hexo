@@ -34,4 +34,4 @@ jobs:
           script: |
             docker stop blog
             docker rm blog
-            docker run -d -p 8080:80 --name blog mystchen/blog:latest sh /run.sh
+            docker run -d -p 80:80 --name blog mystchen/blog:latest sh /run.sh
