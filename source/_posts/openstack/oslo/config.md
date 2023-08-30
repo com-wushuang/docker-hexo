@@ -40,6 +40,15 @@ cfg.CONF(sys.argv[1:])
 print("The value of option1 is %s" % cfg.CONF.mygroup.option1)
 print("The value of option2 is %d" % cfg.CONF.mygroup.option2)
 ```
+- 准备一个配置文件
+```ini
+[mygroup]
+option1 = foo
+# Comment out option2 to test the default value
+# option2 = 123
+```
+- 调用方式: `python config.py --config-file test.conf`
+
 ## nova 组件使用
 - `nova.conf` 这个 `pacekage` 用来注册 `nova` 组件的所有配置项
 - `CONF` 单例对象在包被导入时被引用,实现方式是使用 `package` 根目录下的 `__init__` 方法
@@ -73,23 +82,20 @@ tree .
 ```
 - 最后在启动服务时使用，例如 `nova-api` 启动，启动服务时会指定配置文件的地址
 ```python
-import sys
-
-from oslo_log import log as logging
-from oslo_reports import guru_meditation_report as gmr
-from oslo_reports import opts as gmr_opts
-
-import nova.conf
-from nova import config
-from nova import exception
-from nova import objects
-from nova import service
-from nova import version
-
 CONF = nova.conf.CONF
 
 
 def main():
     config.parse_args(sys.argv) # 启动服务时会指定配置文件的路径
     logging.setup(CONF, "nova") # CONF 加载完毕开始使用
+```
+## cli
+- 可以使用 `oslo-config-generator`查看服务有哪些配置
+- 例1：查看 log 相关配置
+```shell
+oslo-config-generator --namespace oslo.log
+```
+- 例2：查看 nova 有哪些配置
+```shell
+oslo-config-generator --namespace nova.conf
 ```
