@@ -7,10 +7,10 @@ categories: OpenStack
 
 ## oslo_config 官方示例
 - 编写配置 `group` 、 `option`
-- 引用 `oslo_config` 包的单例
-- 调用该单例对象的 `api` 对配置 `group` 、 `option` 进行注册
-- 调用单例对象 `CONF` 的 `__call__` 方法对命令行参数(指定配置文件的位置)进行解析
-- 这样以后，配置文件的值便已经注入到了这个单例对象 `CONF` 中
+- 引用 `oslo_config` 包的 `cfg` 模块，模块初始化好了一个变量 `CONF` ，这变量是在模块被导入时初始化的。
+- 调用 `CONF` 的 `api` 对配置 `group` 、 `option` 进行注册
+- 调用 `CONF` 的 `__call__` 方法对命令行参数(指定配置文件的位置)进行解析
+- 这样以后，配置文件的值便已经注入到了这个对象 `CONF` 中
 ```python
 import sys
 
@@ -48,7 +48,20 @@ option1 = foo
 # option2 = 123
 ```
 - 调用方式: `python config.py --config-file test.conf`
+## 思考
+如果 `oslo_config.cfg` 模块被多次导入，`CONF` 变量会被多次初始化么？
+```python
+# foo/bar.py
+print("bar module be imported!")
 
+# main.py
+from foo import bar
+from foo import bar
+
+# 输出
+bar module be imported!
+```
+- 由于有 sys.modules 的存在，当你导入一个已导入的模块时，实际上是没有效果的。
 ## nova 组件使用
 - `nova.conf` 这个 `pacekage` 用来注册 `nova` 组件的所有配置项
 - `CONF` 单例对象在包被导入时被引用,实现方式是使用 `package` 根目录下的 `__init__` 方法
