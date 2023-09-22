@@ -150,7 +150,6 @@ class Launcher(object):
             self.conf.mutate_config_files()
         self.services.restart()
 ```
-- 构造方法 `__init__` 给 `services` 属性赋值，他是一个重要的包内的类，对库的调用方其实是不感知的，但是它很重要，后面我们会介绍它
 - `launch_service` 是库对外的 `api` 这一点我们在官方的示例中也看的到。
 - `Launcher` 类有两个子类， `ServiceLauncher` 、 `ProcessLauncher`。是该库对外的 `api` ，在上面的官方示例中也可以看出来，他们主要是重写了 `__init__` 和 `launch_service`
 ```python
