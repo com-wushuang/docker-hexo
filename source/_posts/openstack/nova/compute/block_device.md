@@ -6,7 +6,12 @@ categories: OpenStack
 ---
 
 ### nova boot 块设备参数
-nova boot(CLI) 关于块设备的参数有三个 `block_device_mapping`、`block_device_mapping_v2`、`block_device`。看了很多网上的文章，一直没搞懂，直到我打开了代码，真的太清晰了。代码逻辑用人类的语言表述，还是有失真的，想起了那一句话，信息在传递的过程中是有衰减和失真的，况且这还是在两种系统之间的传递（python和人类语言），然后我想起了那一句话，no bb show me your code！
+`nova boot(CLI)` 关于块设备的参数有三个
+-  `block_device_mapping`
+- `block_device_mapping_v2`
+- `block_device`
+
+看了很多网上的文章，一直没搞懂，直到我打开了代码，真的太清晰了。代码逻辑用人类的语言表述，还是有失真的，想起了那一句话，信息在传递的过程中是有衰减和失真的，况且这还是在两种系统之间的传递（python和人类语言），然后我想起了那一句话，no bb show me your code！
 
 #### 1、block_device_mapping
 
@@ -182,9 +187,6 @@ def do_boot(cs, args):
 | volume  | volume  |  直接挂载到 compute 节点 | 当 boot_index = 0 时相当于 --boot-volume id  |
 | volume  | snapshot | 调用 cinder 依据快照创建新卷，挂载到compute节点  | 当 boot_index = 0 时相当于 --snapshot id |
 | volume  | image  | 调用cinder依据镜像创建新卷，挂载到compute节点  | 当 boot_index = 0 时相当于 --image id （Boot from image (creates a new volume)） |
-| volume  | blank | 在 Hypervisor 上创建 ephemeral 分区，将 image 拷贝到里面并启动虚机 | 相当于普通的 Boot from image  |
-| local  | image | 在 Hypervisor 上创建 ephemeral 分区，将 image 拷贝到里面并启动虚机 | 相当于普通的 Boot from image  |
-|local|blank|format=swap 时，创建 swap 分区；默认创建 ephemeral  分区|当 boot_index=-1, shutdown=remove, format=swap 时相当于 --swap <swap size in MB>；当 boot_index=-1，shutdown=remove 时相当于 --ephemeral|
 
 ### 数据表
 - 在 `nova` 的数据表中有 `block_device_mapping`
@@ -274,7 +276,7 @@ self.compute_rpcapi.build_and_run_instance(context,
             self._add_missing_dev_names(bdms, instance)
 
             # 前文conductor查询出数据库中的 bdms 信息
-            # 然后这里将数据库类型的 bdms 封装成对于的blockdevice类
+            # 然后这里将数据库类型的 bdms 封装成对应的blockdevice类
             block_device_info = driver.get_block_device_info(instance, bdms)
             mapping = driver.block_device_info_get_mapping(block_device_info)
 
@@ -421,6 +423,99 @@ def attach_block_devices(block_device_mapping, *attach_args, **attach_kwargs):
         _log_and_attach(device)
     return block_device_mapping
 ```
+
+### 不同 attach 方法解析
+- `DriverVolImageBlockDevice`：基于镜像启动虚机就是这个类型
+```python
+class DriverVolImageBlockDevice( ):
+
+    _valid_source = 'image'
+    _proxy_as_attr_inherited = set(['image_id'])
+
+    def attach(self, context, instance, volume_api,
+               virt_driver, wait_func=None):
+        if not self.volume_id: # 如果 volume 不存在先调用 cinder-api 基于 image 创建一个 volume
+            vol = self._create_volume(
+                context, instance, volume_api, self.volume_size,
+                wait_func=wait_func, image_id=self.image_id)
+
+            self.volume_id = vol['id']
+
+            # TODO(mriedem): Create an attachment to reserve the volume and
+            # make us go down the new-style attach flow.
+
+        # 创建成功后，attach 和 DriverVolumeBlockDevice 一样了，直接调用父类方法
+        super(DriverVolImageBlockDevice, self).attach(
+            context, instance, volume_api, virt_driver)
+```
+- `DriverVolumeBlockDevice`: 
+    - 1.从volume启动虚机（启动盘） 
+    - 2.在启动时就给虚机附加一块volume（数据盘）
+
+这两种情况都是这种类型。
+```python
+class DriverVolumeBlockDevice(DriverBlockDevice):
+    @update_db
+    def attach(self, context, instance, volume_api, virt_driver,
+               do_driver_attach=False, **kwargs):
+        volume = self._get_volume(context, volume_api, self.volume_id)
+        volume_api.check_availability_zone(context, volume,
+                                           instance=instance)
+        # Check to see if we need to lock based on the shared_targets value.
+        # Default to False if the volume does not expose that value to maintain
+        # legacy behavior.
+        if volume.get('shared_targets', False):
+            # Lock the attach call using the provided service_uuid.
+            @utils.synchronized(volume['service_uuid'])
+            def _do_locked_attach(*args, **_kwargs):
+                self._do_attach(*args, **_kwargs)
+
+            _do_locked_attach(context, instance, volume, volume_api,
+                              virt_driver, do_driver_attach)
+        else:
+            # 因为volume已存在的，所以直接调用 libvirt 接口 attach 到虚机
+            # We don't need to (or don't know if we need to) lock.
+            self._do_attach(context, instance, volume, volume_api,
+                            virt_driver, do_driver_attach)
+```
+- `DriverVolSnapshotBlockDevice`: 从快照启动虚机就是这种类型
+```python
+class DriverVolSnapshotBlockDevice(DriverVolumeBlockDevice):
+
+    _valid_source = 'snapshot'
+    _proxy_as_attr_inherited = set(['snapshot_id'])
+
+    def attach(self, context, instance, volume_api,
+               virt_driver, wait_func=None):
+
+        if not self.volume_id:
+            # 先通过 snapshot_id 查询 snapshot
+            snapshot = volume_api.get_snapshot(context,
+                                               self.snapshot_id)
+            # NOTE(lyarwood): Try to use the original volume type if one isn't
+            # set against the bdm but is on the original volume.
+            if not self.volume_type and snapshot.get('volume_id'):
+                snap_volume_id = snapshot.get('volume_id')
+                orig_volume = volume_api.get(context, snap_volume_id)
+                self.volume_type = orig_volume.get('volume_type_id')
+
+            # 基于 snapshot 创建新 volume
+            vol = self._create_volume(
+                context, instance, volume_api, self.volume_size,
+                wait_func=wait_func, snapshot=snapshot)
+
+            self.volume_id = vol['id']
+
+            # TODO(mriedem): Create an attachment to reserve the volume and
+            # make us go down the new-style attach flow.
+        
+        # 创建完成后 attach volume
+        # Call the volume attach now
+        super(DriverVolSnapshotBlockDevice, self).attach(
+            context, instance, volume_api, virt_driver)
+```
+### _do_attach 实现解析
+
 
 ###  日志分析
 1、开始进行虚拟机的块设备处理
