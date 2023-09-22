@@ -1,5 +1,9 @@
-# nova-compute 启动流程
-
+---
+title:  nova-compute 启动流程
+date: 2023-09-20 15:18:17
+tags:
+categories: OpenStack
+---
 ## service.Service 对象初始化
 - 在 `nova.cmd.compute:main` 函数发起调用初始化 `service.Service`，如下：
 ```python
