@@ -35,4 +35,5 @@ cloud-init 的配置文件：
 - /etc/cloud/cloud.cfg
 
 **三、数据源**
-cloud-init 、configdrive、nova metadata、之间的关系：从上文介绍我们知道，cloud-ini是一种初始化配置工具，它根据数据源中的数据配置计算机。这里的数据源可以有多种，configDrive 和 nova metadata 就是其中的两种。
+- cloud-ini是一种初始化配置工具，它根据数据源中的数据配置计算机。目前内置的数据源有：OpenStack、ConfigDrive、Amazon EC2、Azure等等
+- cloud-init在实例内部启动时并不知道从哪里才能够找到实例数据，它会根据预设的一个数据源的列表一个一个查找实例数据，而首个能够找到实例数据的数据源将成为这次启动的数据源。

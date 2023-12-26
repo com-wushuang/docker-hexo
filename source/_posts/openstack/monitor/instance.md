@@ -10,7 +10,8 @@ categories: openstack
 - `Libvirt-python` 就是基于 `libvirt API` 的 `python` 语言绑定工具包，通过该包可以实现对 `VM` 日常管理和监控数据的获取。
 - `Libvirt-python` 的接口文档：https://libvirt-python.readthedocs.io/monitoring-performance/
 
-
+## 基于串口通信的云主机监控
+这种方式将内置一个数据采集的 agent 在虚机内部，然后通过
 ## 基于 QGA
 `QGA` 是一个运行在虚拟机内部的普通应用程序，其目的是实现一种宿主机和虚拟机进行交互的方式，这种方式不依赖于网络，而是依赖于 `virtio-serial` 或者 `isa-serial` ，而 `QEMU` 则提供了串口设备的模拟及数据交换的通道，最终呈现出来的是一个串口设备（虚拟机内部）和一个 `unix socket` 文件（宿主机上）。
 
