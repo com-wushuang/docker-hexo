@@ -1,3 +1,10 @@
+---
+title: 文章标题
+tags: 
+index_img: /img/song/tears.png
+date: 2024-08-28 14:00:00
+---
+
 # 你是雨
 
 你是雨
