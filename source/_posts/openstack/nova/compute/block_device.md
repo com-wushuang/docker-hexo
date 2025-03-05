@@ -11,8 +11,6 @@ categories: OpenStack
 - `block_device_mapping_v2`
 - `block_device`
 
-看了很多网上的文章，一直没搞懂，直到我打开了代码，真的太清晰了。代码逻辑用人类的语言表述，还是有失真的，想起了那一句话，信息在传递的过程中是有衰减和失真的，况且这还是在两种系统之间的传递（python和人类语言），然后我想起了那一句话，no bb show me your code！
-
 #### 1、block_device_mapping
 
 - `openstack` 抄袭 `EC2` 后的产物
