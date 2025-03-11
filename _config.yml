@@ -9,11 +9,11 @@ description: ''
 keywords:
 author: mybestcheng
 language: zh-CN
-timezone: ''
+timezone: Asia/Shanghai
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://example.com/child' and root as '/child/'
-url: http://example.com
+url: http://mybestcheng.site
 root: /
 permalink: :year/:month/:day/:title/
 permalink_defaults:
