@@ -5,186 +5,40 @@ tags:
 categories: OpenStack
 ---
 
-### nova boot 块设备参数
-`nova boot(CLI)` 关于块设备的参数有三个
--  `block_device_mapping`
-- `block_device_mapping_v2`
-- `block_device`
-
-#### 1、block_device_mapping
-
-- `openstack` 抄袭 `EC2` 后的产物
-- 代码路径:`novaclient/v2/shell.py::_boot`
-- 参数样例：`--block-device-mapping vdc=818f15ec-3c5d-4791-b72e-528f82e97584:::0`
-- 参数说明：`<dev-name>=<id>:<type>:<size(GB)>:<delete-on-terminate>`
-```python
-    # 把list类型转成dict类型
-    block_device_mapping = {}
-    for bdm in args.block_device_mapping:
-        # 按照固定的格式分割
-        device_name, mapping = bdm.split('=', 1)
-        # 以device name 为 key
-        block_device_mapping[device_name] = mapping
-```
-#### 2、block_device_mapping_v2
-- `block_device_mapping` 的 `v2` 版本
-- `block_device_mapping` 和 `block_device_mapping_v2` 只能有一个出现在参数列表中
-- `block_device` 会转变成 `block_device_mapping_v2`中的项
-- `block_device` 格式：
-```
-id=UUID(image_id,snapshot_id,volume_id)
-souce=源类型(image,snapshot,volume,blank)
-dest=目的类型（volume,local）
-bus=总线类型（uml,lxc,virtio等，常用virtio）
-type=设备类型（disk,cdrom,Floppy,Flash,默认是disk）
-device=设备名称（vda,xda）
-size=块大小
-format=格式（ext4，ISO,swap,ntfs）
-bootindex=定义启动盘，是启动盘的话需要是０
-shutdown=关机对应动作（prserve,remove）
-```
-- 代码如下：
-```python
-block_device_mapping_v2 = _parse_block_device_mapping_v2(cs, args, image)
-
-def _parse_block_device_mapping_v2(cs, args, image):
-    bdm = []
-
-    # boot_volume 转化成 block_device_mapping_v2 的项
-    if args.boot_volume:
-        bdm_dict = {'uuid': args.boot_volume, 'source_type': 'volume',
-                    'destination_type': 'volume', 'boot_index': 0,
-                    'delete_on_termination': False}
-        bdm.append(bdm_dict)
-
-    # snapshot 转化成 block_device_mapping_v2 的项
-    if args.snapshot:
-        bdm_dict = {'uuid': args.snapshot, 'source_type': 'snapshot',
-                    'destination_type': 'volume', 'boot_index': 0,
-                    'delete_on_termination': False}
-        bdm.append(bdm_dict)
-
-    # 处理 block_device 参数，也把他们转化成 block_device_mapping_v2 的项
-    for device_spec in args.block_device:
-        spec_dict = _parse_device_spec(device_spec)
-        bdm_dict = {}
-
-        if ('tag' in spec_dict and not _supports_block_device_tags(cs)):
-            raise exceptions.CommandError(
-                _("'tag' in block device mapping is not supported "
-                  "in API version %(version)s.")
-                % {'version': cs.api_version.get_string()})
-
-        for key, value in spec_dict.items():
-            bdm_dict[CLIENT_BDM2_KEYS[key]] = value
-
-        source_type = bdm_dict.get('source_type')
-        if not source_type:
-            bdm_dict['source_type'] = 'blank'
-        elif source_type not in (
-                'volume', 'image', 'snapshot', 'blank', 'backup'):
-            raise exceptions.CommandError(
-                _("The value of source_type key of --block-device "
-                  "should be one of 'volume', 'image', 'snapshot' "
-                  "or 'blank' but it was '%(action)s'")
-                % {'action': source_type})
-
-        destination_type = bdm_dict.get('destination_type')
-        if not destination_type:
-            source_type = bdm_dict['source_type']
-            if source_type in ('image', 'blank'):
-                bdm_dict['destination_type'] = 'local'
-            if source_type in ('snapshot', 'volume'):
-                bdm_dict['destination_type'] = 'volume'
-        elif destination_type not in ('local', 'volume'):
-            raise exceptions.CommandError(
-                _("The value of destination_type key of --block-device "
-                  "should be either 'local' or 'volume' but it "
-                  "was '%(action)s'")
-                % {'action': destination_type})
-
-        # Convert the delete_on_termination to a boolean or set it to true by
-        # default for local block devices when not specified.
-        if 'delete_on_termination' in bdm_dict:
-            action = bdm_dict['delete_on_termination']
-            if action not in ['remove', 'preserve']:
-                raise exceptions.CommandError(
-                    _("The value of shutdown key of --block-device shall be "
-                      "either 'remove' or 'preserve' but it was '%(action)s'")
-                    % {'action': action})
-
-            bdm_dict['delete_on_termination'] = (action == 'remove')
-        elif bdm_dict.get('destination_type') == 'local':
-            bdm_dict['delete_on_termination'] = True
-
-        bdm.append(bdm_dict)
-```
-#### 3、发送boot 请求
-```python
-def do_boot(cs, args):
-    """Boot a new server."""
-    # 整理命令行参数，前面的逻辑都在这个 _boot 函数中
-    boot_args, boot_kwargs = _boot(cs, args)
-
-    #...省略多行..
-
-    # 发送请求到 
-    server = cs.servers.create(*boot_args, **boot_kwargs)
-```
-
-#### 4、nova-api 侧的块设备参数
-从上面的过程我们能够看到，`cli` 参数在 `novaclient` 处做了一些预处理（整合）然后，在调用nova-api 创建虚拟机接口。到了 nova-api 侧参数如下例子：
+### nova-api 侧的块设备参数
+`nova-api`侧参数如下例子：
 ```json
+# POST /servers
 {
-    "server": {
-        "name": "\u751f\u4ea7\u8fd0\u8425\u76d1\u63a7\u7cfb\u7edf\u6570\u636e\u91c7\u96c6\u670d\u52a1\u5668",
-        "availability_zone": "public",
-        "block_device_mapping_v2": [
-            {
-                "source_type": "image",
-                "boot_index": "0",
-                "uuid": "dbbec6ed-017e-45b0-845d-45c73c718ac6",
-                "volume_size": 100,
-                "destination_type": "volume",
-                "delete_on_termination": true,
-                "volume_type": "SAS-public",
-                "device_name": "vda"
-            }
-        ],
-        "flavorRef": "98d0271a-6bc6-42dc-b8a2-62e4c688f333",
-        "metadata": {
-            "admin_pass": "***",
-            "changePasswd": "True"
-        },
-        "networks": [
-            {
-                "ct_fixed_ips": [
-                    {
-                        "subnet_id": "a2b0a0ad-6278-400f-b53c-e4f1ccf8dad9"
-                    }
-                ],
-                "uuid": "e2d8cd83-c2b0-4967-a163-8a4f338727a6"
-            }
-        ],
-        "security_groups": [
-            {
-                "name": "dcf33623-e360-47eb-a856-b4db405bc47c"
-            }
-        ]
-    }
+    "block_device_mapping_v2": [{
+        "boot_index": "0",
+        "uuid": "ac408821-c95a-448f-9292-73986c790911",
+        "source_type": "image",
+        "volume_size": "25",
+        "destination_type": "volume",
+        "delete_on_termination": true,
+        "tag": "disk1",
+        "disk_bus": "scsi",
+        "guest_format": "ext2"
+    }]
 }
 ```
+- `source_type`表示待创建的块设备的初始数据来源，这一般用于将系统镜像数据拷贝到具体新块设备中，如果不需要数据，则标记类型为blank，创建一块空白块设备；
+- `destination_type`只支持volume和local两种形式。volume表示块设备由cinder提供，local表示通过计算节点（hypervisor所在节点）开辟一块空间提供。
 ### 块设备分类
 - 由于源类型(image,snapshot,volume,blank)有这么几种可选
 - 目的类型（volume,local）有这两种可选
 - 上面参数可以组合出几种形态，依据不同的形态有不同的含义：
 
 
-| dest  | source  | 说明  | shortcut  |
-|---|---|---|---|
-| volume  | volume  |  直接挂载到 compute 节点 | 当 boot_index = 0 时相当于 --boot-volume id  |
-| volume  | snapshot | 调用 cinder 依据快照创建新卷，挂载到compute节点  | 当 boot_index = 0 时相当于 --snapshot id |
-| volume  | image  | 调用cinder依据镜像创建新卷，挂载到compute节点  | 当 boot_index = 0 时相当于 --image id （Boot from image (creates a new volume)） |
+| dest type | source type | 说明                                                         |
+| --------- | ----------- | ------------------------------------------------------------ |
+| volume    | volume      | 可直接挂载到虚拟机中。当 boot_index = 0， 相当于boot from volume |
+|           | snapshot    | 调用 cinder 依据快照创建新卷，并挂载到虚拟机中。当 boot_index = 0， 相当于boot from snapshot |
+|           | image       | 调用cinder依据镜像创建新卷，将glance image的数据拷贝到新建卷中（由cinder访问glance完成），然后挂载到虚拟机中。当 boot_index = 0， 相当于boot from image |
+|           | blank       | 调用cinder依大小创建一个空卷并挂载到虚拟机中                 |
+| local     | image       | 在计算节点特定位置创建 ephemeral 分区，将 glance 的image 数据拷贝新建的分区中，并启动虚拟机 |
+|           | blank       | guest_format=swap 时，创建 swap 分区，否则创建 ephemeral  分区，并挂载到虚拟机中 |
 
 ### 数据表
 - 在 `nova` 的数据表中有 `block_device_mapping`

@@ -307,8 +307,6 @@ libvirt的工作完成，此时volume已经挂载到虚拟机中了。
 
 
 # cinder 侧代码
-## attachments.create
-
 在nova中，`volume_api.initialize_connection()`调用Cinder API的initialize_connection方法。该方法又会RPC请求给volume所在的`cinder-volume`服务节点。代码位置为`cinder/volume/manager.py`，该方法也是分阶段的。
 
 - driver.validate_connector()
